@@ -6,11 +6,13 @@ import requests  # noqa We are just importing this to prove the dependency insta
 import yamllint
 
 def main():
-    my_input = os.environ["INPUT_MYINPUT"]
+    yaml_path = os.environ["INPUT_MYINPUT"]
 
-    my_output = f"Hello {my_input}"
+    my_output = f"Hello {yaml_path}"
 
-    print(f"::set-output name=myOutput::{my_output}")
+    if "GITHUB_OUTPUT" in os.environ:
+        with open(os.environ["GITHUB_OUTPUT"], "a") as f :
+            print("{0}={1}".format("myOutput", my_output), file=f)
 
 
 if __name__ == "__main__":
