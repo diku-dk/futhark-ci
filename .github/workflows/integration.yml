@@ -9,8 +9,8 @@ jobs:
         id: selftest
         # Put your action repo here
         uses: diku-dk/futhark-ci@main
-          with:
-            permission: write
+        with:
+          permission: write
 
       - name: Check outputs
         run: |
