@@ -9,8 +9,7 @@ jobs:
         id: selftest
         uses: diku-dk/futhark-ci@main
         with:
-          inputs:
-            myInput: write
+          inputs: write
 
       - name: Check outputs
         run: test "${{ steps.selftest.outputs.myOutput }}" == "write"
