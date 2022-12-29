@@ -19,6 +19,7 @@ def main():
     if 'GITHUB_OUTPUT' in os.environ:
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f :
             print(f'permission={permission}', file=f)
+            print(f'result={result}', file=f)
 
 
 if __name__ == "__main__":
