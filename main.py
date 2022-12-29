@@ -14,7 +14,7 @@ def main():
     #     'X-GitHub-Api-Version': '2022-11-28'
     # }
 
-    result = requests.api.post(url='https://api.github.com/users/WilliamDue/repos', header=header)
+    # result = requests.api.post(url='https://api.github.com/users/WilliamDue/repos', header=header)
 
     if 'GITHUB_OUTPUT' in os.environ:
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f :
