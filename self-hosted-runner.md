@@ -1,4 +1,4 @@
-# Setting up Self-hosed Runners
+# Setting up Self-hosted Runners
 This guide assumes Linux is use, but it will probably be much the same for different operating systems and similar guides can be found the links referenced in the guide.
 ## Installation
 Go to the Futhark repository then navigate from Settings $\to$ Actions $\to$ Runners and then click the [New self-hosted runner](https://github.com/SelfHostedRunnerTest/futhark/settings/actions/runners/new) button.
