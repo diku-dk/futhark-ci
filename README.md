@@ -1,2 +1,5 @@
-# futhark-ci
-CI tool for Futhark
+# Futhark-CI
+This repository is meant to explain how to use the CI tools for Futhark.
+
+* [Setting up Self-hosed Runners](self-hosted-runner.md)
+* [Workflow for benchmarks](/benchmark-workflow/main.yml)
