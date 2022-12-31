@@ -22,7 +22,12 @@ CUDA,OpenCL,Multicore
 ```
 In case the self-hosted runner is not correctly configured `./config.sh` can be executed again with all its parameters and a new token. This will initiate the reconfiguration of the self-hosted runner.
 ## Deployment
-Inside the folder of the self-hosted runner can a shell script be found that will run the self-hosted runner. This script can be executed using `./run.sh` but before executing it make sure the correct [environment variables](https://github.com/diku-dk/howto/blob/main/servers.md#environment-variables) are set which will enable the ability to use the GPUs. `run.sh` could be used to test if the self-hosted runner runs the benchmarks as expected. In the long term it should be setup as a service. To do this put the shell script [svc-install.sh](svc-install.sh) inside the self-hosted runner folder and execute it.
+Inside the folder of the self-hosted runner can a shell script be found that will run the self-hosted runner. This script can be executed using `./run.sh` but before executing it make sure the correct [environment variables](https://github.com/diku-dk/howto/blob/main/servers.md#environment-variables) are set which will enable the ability to use the GPUs. `run.sh` could be used to test if the self-hosted runner runs the benchmarks as expected. 
+
+For a more permanent use of the runner, `run.sh` can be used as a background process, this can be done with the help of [start-runner.sh](start-runner.sh) and [stop-runner.sh](stop-runner.sh). Put these inside the folder of the runner and then execute [start-runner.sh](start-runner.sh) to start the runner or stop the runner with [stop-runner.sh](stop-runner.sh). Something to note is on the start of the runner the console output from `run.sh` will be directed to a log file.
+
+### Running the runner using Systemd
+An alternative is using `svc.sh` which is Githubs way of setting up the runner as a service with the use of `systemd`. To do this put the shell script [svc-install.sh](svc-install.sh) inside the self-hosted runner folder and execute it.
 ```
 chmod +x svc-install.sh && sudo ./svc-install.sh
 ```
