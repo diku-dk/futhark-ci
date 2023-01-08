@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import time
 import signal
-from typing import Union
+from typing import Union, Tuple
 
 
 '''
@@ -18,11 +18,15 @@ INSTALLATION = \
 echo "147c14700c6cb997421b9a239c012197f11ea9854cd901ee88ead6fe73a72c74  actions-runner-linux-x64-2.299.1.tar.gz" | shasum -a 256 -c
 tar xzf ./actions-runner-linux-x64-2.299.1.tar.gz'''
 
+'''
+The folder where the runner files are saved.
+'''
+RUNNER_FOLDER = 'actions-runner'
 
 class Chdir:
     '''
-    A class for making open with statements for changing working directory instead of the need to
-    manange itself.
+    A class for using with statements for changing working directory and getting back to the working
+    directory when the was object instantiated.
     '''
 
     def __init__(self, path) -> None:
@@ -47,33 +51,62 @@ class Chdir:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         '''
-        Goes back to the original working directory when exiting the.
+        Goes back to the working directory from when the object was instantiated.
         '''
         os.chdir(self._old_path)
 
 
-def validate_flags(flags: dict[str, Union[str, None]]) -> None:
+def validate_setup_flags(flags: dict[str, Union[str, None]]) -> Tuple[bool, Union[Exception, None]]:
     '''
-    This function will throw an error if some flags are None.
+    This function check if the setup flags are valid.
 
     Parameters
     ----------
     flags : dict[str, Union[str, None]]
         The flags which have been passed to the installation script.
     
-    Raises
-    ------
-    Exception
-        If some of the strings are None.
+    Returns
+    -------
+    bool
+        True if the flags were valid otherwise false.
+    Union[Exception, None]
+        None if the flags were valid otherwise a corresponding error.
     '''
-
     if any(map(lambda opt: opt is None, flags.values())):
         missing_arg_pairs = filter(lambda pair: pair[1] is None, flags.items())
         missing_args = ', '.join(map(lambda pair: pair[0], missing_arg_pairs))
-        raise Exception(f'Missing arguments: Please specify {missing_args}.')
+        return False, Exception(f'Missing arguments: Do not specify {missing_args}.')
+
+    return True, None
 
 
-def get_flags() -> dict[str, Union[str, None]]:
+def validate_start_flags(flags: dict[str, Union[str, None]]) -> Tuple[bool, Union[Exception, None]]:
+    '''
+    This function check if the starting flags are valid.
+
+    Parameters
+    ----------
+    flags : dict[str, Union[str, None]]
+        The flags which have been passed to the installation script.
+    
+    Returns
+    -------
+    bool
+        True if the flags were valid otherwise false.
+    Union[Exception, None]
+        None if the flags were valid otherwise a corresponding error.
+    '''
+
+    if any(map(lambda opt: opt is not None, flags.values())):
+        missing_arg_pairs = filter(lambda pair: pair[1] is not None, flags.items())
+        missing_args = ', '.join(map(lambda pair: pair[0], missing_arg_pairs))
+        return False, Exception(f'Too many arguments: Do not specify {missing_args} when ' +
+        'using the start flag.')
+
+    return True, None
+
+
+def get_flags() -> dict[str, str]:
     '''
     Retrieves the flags given by the user and returns them as a dictionary. The values are either
     strings or None.
@@ -88,7 +121,7 @@ def get_flags() -> dict[str, Union[str, None]]:
     
     Returns
     -------
-    dict[str, Union[str, None]]
+    dict[str, str]
         The flags given by the user as a dictionary.
     '''
 
@@ -102,13 +135,30 @@ def get_flags() -> dict[str, Union[str, None]]:
                       help='the NAME of the runner.', metavar='NAME')
     parser.add_option('-l', '--labels', dest='labels', type='string',
                       help='the LABELS the runner should have.', metavar='LABELS')
+    parser.add_option('-s', '--start', action="store_true", dest="start", default=False,
+                      help='the LABELS the runner should have.', metavar='LABELS')
     (flags, _) = parser.parse_args()
     flags = flags.__dict__
 
-    if flags.get('url') is None:
-        flags['url'] = 'https://github.com/diku-dk/futhark'
-    
-    validate_flags(flags)
+    if not flags['start']:
+        start = flags.pop('start')
+
+        if flags.get('url') is None:
+            flags['url'] = 'https://github.com/diku-dk/futhark'
+
+        is_valid, error = validate_setup_flags(flags)
+        if not is_valid:
+            raise error
+
+        flags['start'] = start
+    else:
+        start = flags.pop('start')
+
+        is_valid, error = validate_start_flags(flags)
+        if not is_valid:
+            raise error
+        
+        flags = {'start': start}
 
     return flags
 
@@ -156,7 +206,7 @@ def str_to_bool(string: str) -> bool:
     raise ValueError("Only 'n' or 'y' can be interpreted as a boolean.")
 
 
-def user_yes_no_query(question) -> bool:
+def user_yes_no_query(question: str) -> bool:
     '''
     Prints a question which should be a yes or no question and asks for 'n' or 'y' as user input.
     If 'n' or 'y' is not given as input then the user is asked again.
@@ -178,40 +228,6 @@ def user_yes_no_query(question) -> bool:
             return str_to_bool(input().lower())
         except ValueError:
             print("Please respond with 'y' or 'n'.")
-
-
-def clean_up() -> None:
-    '''
-    A function that will try to delete and stop the old runner if it exists. It removes 
-    .actions-runner. If .actions-runner/.pid exists and is not empty then the old process is
-    stopped. Also if .actions-runner/.token exists and is not empty then the runner is removed using
-    .actions-runner/config.sh.
-
-    Incase other runners not known to .pid and .token then they are not removed.
-
-    Incase something goes wrong try to remove it manually using:
-    'https://github.com/{orginization}/{repository}/settings/actions/runners'
-    Or end the process manually using the pid found by:
-    'pidof Runner.Listener'
-    '''
-
-    if not os.path.exists('.actions-runner'):
-        raise Exception('.actions-runner does not exists so the runner cannot be cleaned up.')
-        
-    with Chdir('.actions-runner'):
-
-        if os.path.exists('.token'):
-            token = open('.token', 'r').read()
-            if token != '':
-                os.system(f'./config.sh remove --token {token} > /dev/null')
-        
-        if os.path.exists('.pid'):
-            pid_str = open('.pid', 'r').read()
-            if pid_str != '':
-                try: os.kill(int(pid_str), signal.SIGKILL)
-                except ProcessLookupError: pass
-    
-    shutil.rmtree('.actions-runner')
     
 
 def find_process_name(pid: int) -> Union[str, None]:
@@ -286,34 +302,97 @@ def find_child_search(pid: int, child_name: str) -> Union[int, None]:
     return None
 
 
-def main() -> None:
+def remove_old_runner():
     '''
-    The script will try to stop the old runner and remove .actions-runner if there is an old runner.
-    It will then install the runner using INSTALLATION, setup the runner and then start the runner.
+    Tries to remove an old runner from.
+    https://github.com/{orginization}/{repository}/settings/actions/runners
+
+    Preconditions
+    -------------
+        The RUNNER_FOLDER exists.
+        A runner is setup in RUNNER_FOLDER.
     '''
 
-    if os.path.exists('.actions-runner'):
-        if not user_yes_no_query('Is it okay to delete the old runner?'):
+    assert(os.path.exists(RUNNER_FOLDER))
+
+    with Chdir(RUNNER_FOLDER):
+        if not os.path.exists('.token'):
+            return
+        
+        token = open('.token', 'r').read()
+        if token == '':
             return
 
-    clean_up()
-    
-    flags = get_flags()
+        if os.system(f'./config.sh remove --token {token} > /dev/null') != 0:
+            raise Exception('Error in runner removal: If "Failed: Removing runner from the ' + 
+                            'server" try getting a new token.')
 
-    install_exception = Exception('Something went wrong doing installation')
-    config_exception = Exception(f'''Something went wrong doing configuration.
-If the error is: 'A runner exists with the same name'
-Then try going to to {flags['url'] + '/settings/actions/runners'}
-and remove the runner with name: {flags['name']}''')
 
-    os.mkdir('.actions-runner')
+def stop_old_runner():
+    '''
+    Tries to stop the active runner with the pid inside .pid.
+
+    Preconditions
+    -------------
+        The RUNNER_FOLDER exists.
+        A runner is setup in RUNNER_FOLDER.
+    '''
+
+    assert(os.path.exists(RUNNER_FOLDER))
+
+    with Chdir(RUNNER_FOLDER):
+        if not os.path.exists('.pid'):
+            return
+        
+        pid_str = open('.pid', 'r').read()
+        if pid_str == '':
+            return
+        
+        try: os.kill(int(pid_str), signal.SIGKILL)
+        except ProcessLookupError: pass
     
-    with Chdir('.actions-runner'):
-        if os.system(INSTALLATION.replace('\n', r'&&')) != 0:
-            raise install_exception
-        if os.system(f'./config.sh --unattended {format_flags(flags)}') != 0:
-            raise config_exception
+    time.sleep(1) # Giving some time for the runner to stop.
+
+
+def clean_up() -> None:
+    '''
+    A function that will try to delete and stop the old runner if it exists. It removes 
+    .actions-runner. If .actions-runner/.pid exists and is not empty then the old process is
+    stopped. Also if .actions-runner/.token exists and is not empty then the runner is removed using
+    .actions-runner/config.sh.
+
+    Incase other runners not known to .pid and .token then they are not removed.
+
+    Incase something goes wrong try to remove it manually using:
+    'https://github.com/{orginization}/{repository}/settings/actions/runners'
+    Or end the process manually using the pid found by:
+    'pidof Runner.Listener'
+    '''
+
+    if not os.path.exists(RUNNER_FOLDER):
+        raise Exception('.actions-runner does not exists so the runner cannot be cleaned up.')
     
+    remove_old_runner()
+    stop_old_runner()    
+    
+    shutil.rmtree(RUNNER_FOLDER)
+
+
+def start() -> None:
+    '''
+    Stops an old runner if it is active and starts a new runner.
+
+    Preconditions
+    -------------
+        The RUNNER_FOLDER exists.
+        A runner is setup in RUNNER_FOLDER.
+    '''
+
+    stop_old_runner()
+
+    assert(os.path.exists(RUNNER_FOLDER))
+
+    with Chdir(RUNNER_FOLDER):
         date = datetime.datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
         command = [f'./run.sh > ../log-{date}.txt']
         p = subprocess.Popen(
@@ -331,9 +410,65 @@ and remove the runner with name: {flags['name']}''')
         if pid is not None:
             with open('.pid', 'w') as fp:
                 fp.write(f'{pid}')
+
+
+def setup(flags: dict[str, str]) -> None:
+    '''
+    Setups the runner, a precondition is the RUNNER_FOLDER does not exists.
+
+    Preconditions
+    -------------
+        The RUNNER_FOLDER does not exist.
+
+    Parameters
+    ----------
+    flags : dict[str, str]
+        The setup flags.
+    '''
+    install_exception = Exception('Something went wrong doing installation')
+    config_exception = Exception(f'''Something went wrong doing configuration.
+If the error is: 'A runner exists with the same name'
+Then try going to {flags['url'] + '/settings/actions/runners'}
+and remove the runner with name: {flags['name']}''')
+
+    assert(not os.path.exists(RUNNER_FOLDER))
+
+    os.mkdir(RUNNER_FOLDER)
+
+    with Chdir(RUNNER_FOLDER):
+
+        if os.system(INSTALLATION.replace('\n', r'&&')) != 0:
+            raise install_exception
+
+        if os.system(f'./config.sh --unattended {format_flags(flags)}') != 0:
+            raise config_exception
         
         with open('.token', 'w') as fp:
             fp.write(flags['token'])
+
+
+def main() -> None:
+    '''
+    The script will try to stop the old runner and remove .actions-runner if there is an old runner.
+    It will then install the runner using INSTALLATION, setup the runner and then start the runner.
+    '''
+
+    flags = get_flags()
+
+    if flags['start']:
+        start()
+        return
+    
+    flags.pop('start')
+    
+    if os.path.exists(RUNNER_FOLDER):
+        if not user_yes_no_query('Is it okay to delete the old runner?'):
+            return
+
+        clean_up()
+
+    setup(flags)
+    start()
 
 
 if __name__ == '__main__':
