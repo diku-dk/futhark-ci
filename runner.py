@@ -19,7 +19,7 @@ echo "147c14700c6cb997421b9a239c012197f11ea9854cd901ee88ead6fe73a72c74  actions-
 tar xzf ./actions-runner-linux-x64-2.299.1.tar.gz'''
 
 '''
-The folder where the runner files are saved.
+The folder where the runner files are stored.
 '''
 RUNNER_FOLDER = 'actions-runner'
 
@@ -80,9 +80,9 @@ def validate_setup_flags(flags: dict[str, Union[str, None]]) -> Tuple[bool, Unio
     return True, None
 
 
-def validate_start_flags(flags: dict[str, Union[str, None]]) -> Tuple[bool, Union[Exception, None]]:
+def is_all_none_flags(flags: dict[str, Union[str, None]]) -> Tuple[bool, Union[Exception, None]]:
     '''
-    This function check if the starting flags are valid.
+    Checks if all the flags are set to None.
 
     Parameters
     ----------
@@ -98,9 +98,9 @@ def validate_start_flags(flags: dict[str, Union[str, None]]) -> Tuple[bool, Unio
     '''
 
     if any(map(lambda opt: opt is not None, flags.values())):
-        missing_arg_pairs = filter(lambda pair: pair[1] is not None, flags.items())
-        missing_args = ', '.join(map(lambda pair: pair[0], missing_arg_pairs))
-        return False, Exception(f'Too many arguments: Do not specify {missing_args} when ' +
+        passed_arg_pairs = filter(lambda pair: pair[1] is not None, flags.items())
+        passed_args = ', '.join(map(lambda pair: pair[0], passed_arg_pairs))
+        return False, Exception(f'Too many arguments: Do not specify {passed_args} when ' +
         'using the start flag.')
 
     return True, None
@@ -136,29 +136,42 @@ def get_flags() -> dict[str, str]:
     parser.add_option('-l', '--labels', dest='labels', type='string',
                       help='the LABELS the runner should have.', metavar='LABELS')
     parser.add_option('-s', '--start', action="store_true", dest="start", default=False,
-                      help='the LABELS the runner should have.', metavar='LABELS')
+                      help='If the runner should START.', metavar='START')
+    parser.add_option('-r', '--remove', dest="remove",
+                      help='the token belonging to the runner that will be REMOVEd.', metavar='REMOVE')
     (flags, _) = parser.parse_args()
     flags = flags.__dict__
-
-    if not flags['start']:
+    
+    if flags.get('start'):
         start = flags.pop('start')
 
-        if flags.get('url') is None:
-            flags['url'] = 'https://github.com/diku-dk/futhark'
-
-        is_valid, error = validate_setup_flags(flags)
-        if not is_valid:
-            raise error
-
-        flags['start'] = start
-    else:
-        start = flags.pop('start')
-
-        is_valid, error = validate_start_flags(flags)
+        is_valid, error = is_all_none_flags(flags)
         if not is_valid:
             raise error
         
         flags = {'start': start}
+        return flags
+    
+    flags.pop('start')
+
+    if flags.get('remove') is not None:
+        remove = flags.pop('remove')
+
+        is_valid, error = is_all_none_flags(flags)
+        if not is_valid:
+            raise error
+
+        flags = {'remove': remove}
+        return flags
+    
+    remove = flags.pop('remove')
+    
+    if flags.get('url') is None:
+        flags['url'] = 'https://github.com/diku-dk/futhark'
+
+    is_valid, error = validate_setup_flags(flags)
+    if not is_valid:
+        raise error
 
     return flags
 
@@ -302,7 +315,7 @@ def find_child_search(pid: int, child_name: str) -> Union[int, None]:
     return None
 
 
-def remove_old_runner():
+def remove_runner(token: str):
     '''
     Tries to remove an old runner from.
     https://github.com/{orginization}/{repository}/settings/actions/runners
@@ -316,21 +329,18 @@ def remove_old_runner():
     assert(os.path.exists(RUNNER_FOLDER))
 
     with Chdir(RUNNER_FOLDER):
-        if not os.path.exists('.token'):
-            return
-        
-        token = open('.token', 'r').read()
-        if token == '':
-            return
 
         if os.system(f'./config.sh remove --token {token} > /dev/null') != 0:
             raise Exception('Error in runner removal: If "Failed: Removing runner from the ' + 
-                            'server" try getting a new token.')
+                            'server" try getting the token of the runner from ' + 
+                            'https://github.com/SelfHostedRunnerTest/futhark/settings/actions/runners')
+    
+    print('The runner has been removed')
 
 
-def stop_old_runner():
+def stop_runner():
     '''
-    Tries to stop the active runner with the pid inside .pid.
+    Tries to stop the active runner with the pid inside .pid. 
 
     Preconditions
     -------------
@@ -348,18 +358,18 @@ def stop_old_runner():
         if pid_str == '':
             return
         
-        try: os.kill(int(pid_str), signal.SIGKILL)
+        try:
+            os.kill(int(pid_str), signal.SIGKILL)
+            time.sleep(1) # Giving some time for the runner to stop.
+            print(f'The runner with pid: {pid_str} has stopped.')
         except ProcessLookupError: pass
-    
-    time.sleep(1) # Giving some time for the runner to stop.
 
 
-def clean_up() -> None:
+def clean_up(token: str) -> None:
     '''
     A function that will try to delete and stop the old runner if it exists. It removes 
-    .actions-runner. If .actions-runner/.pid exists and is not empty then the old process is
-    stopped. Also if .actions-runner/.token exists and is not empty then the runner is removed using
-    .actions-runner/config.sh.
+    RUNNER_FOLDER. If RUNNER_FOLDER/.pid exists and is not empty then the old process is
+    stopped.
 
     Incase other runners not known to .pid and .token then they are not removed.
 
@@ -370,10 +380,10 @@ def clean_up() -> None:
     '''
 
     if not os.path.exists(RUNNER_FOLDER):
-        raise Exception('.actions-runner does not exists so the runner cannot be cleaned up.')
+        raise Exception(f'{RUNNER_FOLDER} does not exists so the runner can not be cleaned up.')
     
-    remove_old_runner()
-    stop_old_runner()    
+    stop_runner()    
+    remove_runner(token)
     
     shutil.rmtree(RUNNER_FOLDER)
 
@@ -388,7 +398,7 @@ def start() -> None:
         A runner is setup in RUNNER_FOLDER.
     '''
 
-    stop_old_runner()
+    stop_runner()
 
     assert(os.path.exists(RUNNER_FOLDER))
 
@@ -410,6 +420,8 @@ def start() -> None:
         if pid is not None:
             with open('.pid', 'w') as fp:
                 fp.write(f'{pid}')
+
+        print(f'The runner with pid: {pid} has started.')
 
 
 def setup(flags: dict[str, str]) -> None:
@@ -445,27 +457,31 @@ and remove the runner with name: {flags['name']}''')
         
         with open('.token', 'w') as fp:
             fp.write(flags['token'])
+    
+    print('The runner has been setup.')
 
 
 def main() -> None:
     '''
-    The script will try to stop the old runner and remove .actions-runner if there is an old runner.
+    The script will try to stop the old runner and remove RUNNER_FOLDER if there is an old runner.
     It will then install the runner using INSTALLATION, setup the runner and then start the runner.
     '''
 
     flags = get_flags()
 
-    if flags['start']:
-        start()
+    if flags.get('start') is not None and flags.get('start'):
+        if os.path.exists(RUNNER_FOLDER):
+            start()
+        else:
+            raise Exception('The runner has to be setup before it can be started.')
         return
     
-    flags.pop('start')
-    
-    if os.path.exists(RUNNER_FOLDER):
-        if not user_yes_no_query('Is it okay to delete the old runner?'):
-            return
+    if flags.get('remove') is not None:
+        clean_up(flags['remove'])
+        return
 
-        clean_up()
+    if os.path.exists(RUNNER_FOLDER):
+        raise Exception('The old runner has to be removed before it can be setup.')
 
     setup(flags)
     start()
