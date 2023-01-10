@@ -4,29 +4,28 @@ This guide assumes Linux is used.
 ### Setup
 Go to the Futhark repository then navigate from Settings $\to$ Actions $\to$ Runners and then click the [New self-hosted runner](https://github.com/diku-dk/futhark/settings/actions/runners/new) button.
 
-Inside here save the token `XXXXXXXXXXXXXXXXXXXXXXXXXXXXX` found in to configure box from the command `./config.sh --url https://github.com/diku-dk/futhark --token XXXXXXXXXXXXXXXXXXXXXXXXXXXXX`.
-Now put the [runner.py](runner.py) script into the folder where the runner will be stored. To setup and start the runner the script will be executed with the three following flags.
+Inside here save the token `XXXXXXXXXXXXXXXXXXXXXXXXXXXXX` found in the command `./config.sh --url https://github.com/diku-dk/futhark --token XXXXXXXXXXXXXXXXXXXXXXXXXXXXX` inside the configure box.
+Now put the [runner.py](runner.py) script into the folder where the runner will be stored and ran. To setup and start the runner the script will be executed with the three following flags.
 ```
 python3 runner.py --token {token} --name {name} --labels label0,label1,label2,...
 ``` 
-An example setup is if a runner with a token `XXXXXXXXXXXXXXXXXXXXXXXXXXXXX`, name `test` and labels `cuda,opencl,multicore` would be.
+An example runner could have a token `XXXXXXXXXXXXXXXXXXXXXXXXXXXXX`, name `test` and labels `cuda,opencl,multicore` which would result in the following command.
 ```
 python3 runner.py --token XXXXXXXXXXXXXXXXXXXXXXXXXXXXX --name test --labels cuda,opencl,multicore
 ```
-The name of the runner and its labels can be seen [here](https://github.com/diku-dk/futhark/settings/actions/runners) when it is setup. The idea with the labels is it makes one able to specify what benchmark the runner should perform by `runs-on: [label]` in the action workflow. Considering the last  example an example could be `runs-on: [cuda]`.
+The name of the runner and its labels can be seen [here](https://github.com/diku-dk/futhark/settings/actions/runners) when it is setup. The idea with the labels is it makes one able to specify what benchmarks the runner should perform by `runs-on: [label]` in the actions workflow. Considering the last example the label `cuda` could be used like sos `runs-on: [cuda]`.
 
-**When the runner is setup it will print the** `pid` **of the self-hosted runner process.** To check if the runner is active check [here](https://github.com/diku-dk/futhark/settings/actions/runners), on this page the runners status can be seen.
+**When the runner is setup it will print the** `pid` **of the self-hosted runner process.** To check if the runner is active check [here](https://github.com/diku-dk/futhark/settings/actions/runners), on this page the runners status can be seen. Another thing to note is the flag `--url` can be used to change the repository by setting it to the url of another repository.
 
 ### Starting the runner
 In case the self-hosted runner stops execute the command.
 ```
 python3 runner.py --start
 ``` 
-This command can also be used to restart the runner. When the runner has started the runner will put its log inside a log.txt file with the current date in the.
+This command can also be used to restart the runner. When the runner has started the runner will put its log inside a log.txt file with the current date in the name.
 
 ### Removal
-When removing the runner go [here](https://github.com/diku-dk/futhark/settings/actions/runners) and click the three dots on the right side of the status of the runner that will be removed. Here the command can be found the command.`./config.sh remove --token XXXXXXXXXXXXXXXXXXXXXXXXXXXXX`
-Now execute the command with token from before.
+When removing the runner go [here](https://github.com/diku-dk/futhark/settings/actions/runners) and click the three dots on the right side of the status of the runner that will be removed. Here the command `./config.sh remove --token XXXXXXXXXXXXXXXXXXXXXXXXXXXXX`, use the token to execute the folloing command with token from before.
 ```
 python3 runner.py --remove XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ``` 
@@ -34,8 +33,8 @@ python3 runner.py --remove XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## Runner properties
 Some important properties to note about the self-hosted runners is.
 - The runner performs one job at a time.
-- The runner token changes overtime.
-- The runners can not be setup in the same folder because of `.runner`.
+- A token used to setup and remove runenrs do not work forever.
+- The runners can not be setup in the same folder because of files like `.runner` (there may be other reasons).
 - Tokens can be reused for setup and removal.
 - Working directory is not cleared from one run to the next. Example of this is when running the job:
     ```
