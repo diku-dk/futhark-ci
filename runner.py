@@ -26,7 +26,7 @@ RUNNER_FOLDER = 'actions-runner'
 class Chdir:
     '''
     A class for using with statements for changing working directory and getting back to the working
-    directory when the was object instantiated.
+    directory from when the object was instantiated.
     '''
 
     def __init__(self, path) -> None:
@@ -56,9 +56,10 @@ class Chdir:
         os.chdir(self._old_path)
 
 
-def validate_setup_flags(flags: dict[str, Union[str, None]]) -> Tuple[bool, Union[Exception, None]]:
+def is_any_none_flags(flags: dict[str, Union[str, None]]) -> Tuple[bool, Union[Exception, None]]:
     '''
-    This function check if the setup flags are valid.
+    This function checks if any flags are none and reports an error asking for the last arguments
+    if sol.
 
     Parameters
     ----------
@@ -75,7 +76,7 @@ def validate_setup_flags(flags: dict[str, Union[str, None]]) -> Tuple[bool, Unio
     if any(map(lambda opt: opt is None, flags.values())):
         missing_arg_pairs = filter(lambda pair: pair[1] is None, flags.items())
         missing_args = ', '.join(map(lambda pair: pair[0], missing_arg_pairs))
-        return False, Exception(f'Missing arguments: Do not specify {missing_args}.')
+        return False, Exception(f'Missing arguments: Please specify {missing_args}.')
 
     return True, None
 
@@ -108,8 +109,7 @@ def is_all_none_flags(flags: dict[str, Union[str, None]]) -> Tuple[bool, Union[E
 
 def get_flags() -> dict[str, str]:
     '''
-    Retrieves the flags given by the user and returns them as a dictionary. The values are either
-    strings or None.
+    Retrieves the flags given by the user and returns them as a dictionary.
 
     Example Output:
     {
@@ -169,7 +169,7 @@ def get_flags() -> dict[str, str]:
     if flags.get('url') is None:
         flags['url'] = 'https://github.com/diku-dk/futhark'
 
-    is_valid, error = validate_setup_flags(flags)
+    is_valid, error = is_any_none_flags(flags)
     if not is_valid:
         raise error
 
@@ -179,7 +179,7 @@ def get_flags() -> dict[str, str]:
 def format_flags(flags: dict[str, str]) -> str:
     '''
     Formats the flag dictionary such that it matches the command-line options used for
-    configure.sh.
+    config.sh.
 
     Example Output:
     '--token XXXXXXXXXXXXXXXXXXXXXXXXXXXXX --name runner --labels cuda,opencl,multicore --url https://github.com/diku-dk/futhark'
@@ -192,55 +192,6 @@ def format_flags(flags: dict[str, str]) -> str:
 
     formatter = lambda pair: f'--{pair[0]} {pair[1]}'
     return ' '.join(map(formatter, flags.items()))
-
-
-def str_to_bool(string: str) -> bool:
-    '''
-    Converts strings to booleans 'y' becomes true and 'n' becomes false.
-
-    Parameters
-    ----------
-    string : str
-        The string that will be converted.
-
-    Raises
-    ------
-    ValueError
-        If the input is not 'y' or 'n'.
-
-    Returns
-    -------
-    bool
-        The converted input.
-    '''
-
-    if string == 'y': return True
-    elif string == 'n': return False
-    raise ValueError("Only 'n' or 'y' can be interpreted as a boolean.")
-
-
-def user_yes_no_query(question: str) -> bool:
-    '''
-    Prints a question which should be a yes or no question and asks for 'n' or 'y' as user input.
-    If 'n' or 'y' is not given as input then the user is asked again.
-
-    Parameters
-    ----------
-    question : str
-        The yes or no question asked.
-
-    Returns
-    -------
-    bool
-        If the answer was yes or no. True for 'y' and False for 'n'.
-    '''
-
-    print(f'{question} [y/n]', end=' ')
-    while True:
-        try:
-            return str_to_bool(input().lower())
-        except ValueError:
-            print("Please respond with 'y' or 'n'.")
     
 
 def find_process_name(pid: int) -> Union[str, None]:
@@ -270,7 +221,7 @@ def find_child_processes(pid: int) -> list[int]:
     Parameters
     ----------
     pid : int
-        The process pid of which the child processes pids will be found.
+        The process' pid of which the childrens pids will be found.
 
     Returns
     -------
@@ -287,7 +238,7 @@ def find_child_processes(pid: int) -> list[int]:
 
 def find_child_search(pid: int, child_name: str) -> Union[int, None]:
     '''
-    Performs a level-order traversal of the tree of child process for a given process to find the
+    Performs a level-order traversal of the tree of child processes for a given process to find a
     child process with a given name.
 
     Parameters
@@ -335,12 +286,12 @@ def remove_runner(token: str):
                             'server" try getting the token of the runner from ' + 
                             'https://github.com/SelfHostedRunnerTest/futhark/settings/actions/runners')
     
-    print('The runner has been removed')
+    print('The runner has been removed.')
 
 
 def stop_runner():
     '''
-    Tries to stop the active runner with the pid inside .pid. 
+    Tries to stop the active runner with the pid inside RUNNER_FOLDER/.pid. 
 
     Preconditions
     -------------
@@ -367,15 +318,15 @@ def stop_runner():
 
 def clean_up(token: str) -> None:
     '''
-    A function that will try to delete and stop the old runner if it exists. It removes 
-    RUNNER_FOLDER. If RUNNER_FOLDER/.pid exists and is not empty then the old process is
-    stopped.
+    A function that will try to delete and stop the old runner if it exists. If RUNNER_FOLDER/.pid 
+    exists and is not empty then the old process is stopped. RUNNER_FOLDER is also removed.
 
-    Incase other runners not known to .pid and .token then they are not removed.
+    Incase other runners are running they will not be removed only the runner with a pid inside
+    .pid.
 
     Incase something goes wrong try to remove it manually using:
     'https://github.com/{orginization}/{repository}/settings/actions/runners'
-    Or end the process manually using the pid found by:
+    or end the process manually using the pid found by:
     'pidof Runner.Listener'
     '''
 
@@ -441,7 +392,7 @@ def setup(flags: dict[str, str]) -> None:
     config_exception = Exception(f'''Something went wrong doing configuration.
 If the error is: 'A runner exists with the same name'
 Then try going to {flags['url'] + '/settings/actions/runners'}
-and remove the runner with name: {flags['name']}''')
+and remove the runner with name: {flags['name']} or use another name.''')
 
     assert(not os.path.exists(RUNNER_FOLDER))
 
