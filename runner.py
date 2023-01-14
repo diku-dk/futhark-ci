@@ -14,6 +14,9 @@ import signal
 import json
 from typing import Union, Tuple
 
+'''
+The default flags depending on the hostname.
+'''
 DEFAULT_SETTINGS = {
     'futharkhpa01fl.unicph.domain': {
         'name': 'A100',
@@ -329,6 +332,7 @@ def remove_runner(token: str):
                             'server" try getting the token of the runner from ' + 
                             'https://github.com/SelfHostedRunnerTest/futhark/settings/actions/runners')
     
+    shutil.rmtree(RUNNER_FOLDER)
     print(f'The runner with name: {name} has been removed.')
 
 
@@ -382,8 +386,6 @@ def clean_up(token: str) -> None:
     
     stop_runner()    
     remove_runner(token)
-    
-    shutil.rmtree(RUNNER_FOLDER)
 
 
 def start() -> None:
@@ -399,7 +401,6 @@ def start() -> None:
     stop_runner()
 
     assert(os.path.exists(RUNNER_FOLDER))
-
 
     with Chdir(RUNNER_FOLDER):
         name = get_name()
