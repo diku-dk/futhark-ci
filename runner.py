@@ -1,12 +1,29 @@
+#!/usr/bin/env python
+
+import sys
+assert sys.version_info >= (3, 9), "Use Python 3.9 or newer."
+
 import os
+import socket
 import optparse
 import datetime
 import shutil
 import subprocess
 import time
 import signal
+import json
 from typing import Union, Tuple
 
+DEFAULT_SETTINGS = {
+    'futharkhpa01fl.unicph.domain': {
+        'name': 'A100',
+        'labels': 'cuda,opencl,multicore',
+    },
+    'futharkhpa02fl.unicph.domain': {
+        'name': 'MI100',
+        'labels': 'opencl,multicore',
+    },
+}
 
 '''
 These are the commands used for installing the self-hosted runner. You may wish to update these
@@ -16,7 +33,8 @@ https://github.com/{organization}/{repository}/settings/actions/runners/new
 INSTALLATION = \
 '''curl -o actions-runner-linux-x64-2.299.1.tar.gz -L https://github.com/actions/runner/releases/download/v2.299.1/actions-runner-linux-x64-2.299.1.tar.gz
 echo "147c14700c6cb997421b9a239c012197f11ea9854cd901ee88ead6fe73a72c74  actions-runner-linux-x64-2.299.1.tar.gz" | shasum -a 256 -c
-tar xzf ./actions-runner-linux-x64-2.299.1.tar.gz'''
+tar xzf ./actions-runner-linux-x64-2.299.1.tar.gz
+rm actions-runner-linux-x64-2.299.1.tar.gz'''
 
 '''
 The folder where the runner files are stored.
@@ -54,6 +72,23 @@ class Chdir:
         Goes back to the working directory from when the object was instantiated.
         '''
         os.chdir(self._old_path)
+
+
+def get_name() -> Union[str, None]:
+    '''
+    Retrieves the name found in .runner and if not possible then None is returned.
+    
+    Returns
+    -------
+    Union[str, None]
+        The name ofthe runner or None if the name does not exist.
+    '''
+
+    path = os.path.join('.runner')
+    if not os.path.exists(path):
+        return None
+    fp = open(path, encoding='utf-8-sig', mode='r')
+    return json.load(fp).get('agentName')
 
 
 def is_any_none_flags(flags: dict[str, Union[str, None]]) -> Tuple[bool, Union[Exception, None]]:
@@ -169,6 +204,12 @@ def get_flags() -> dict[str, str]:
     if flags.get('url') is None:
         flags['url'] = 'https://github.com/diku-dk/futhark'
 
+    hostname = socket.gethostname()
+    settings = DEFAULT_SETTINGS.get(hostname)
+    if flags.get('name') is None and flags.get('labels') is None and settings is not None:
+        flags['name'] = settings['name']
+        flags['labels'] = settings['labels']
+
     is_valid, error = is_any_none_flags(flags)
     if not is_valid:
         raise error
@@ -281,12 +322,14 @@ def remove_runner(token: str):
 
     with Chdir(RUNNER_FOLDER):
 
-        if os.system(f'./config.sh remove --token {token} > /dev/null') != 0:
+        name = get_name()
+        if os.path.exists('./config.sh') and \
+           os.system(f'./config.sh remove --token {token} > /dev/null') != 0:
             raise Exception('Error in runner removal: If "Failed: Removing runner from the ' + 
                             'server" try getting the token of the runner from ' + 
                             'https://github.com/SelfHostedRunnerTest/futhark/settings/actions/runners')
     
-    print('The runner has been removed.')
+    print(f'The runner with name: {name} has been removed.')
 
 
 def stop_runner():
@@ -300,8 +343,12 @@ def stop_runner():
     '''
 
     assert(os.path.exists(RUNNER_FOLDER))
+    
 
     with Chdir(RUNNER_FOLDER):
+        
+        name = get_name()
+        
         if not os.path.exists('.pid'):
             return
         
@@ -312,7 +359,7 @@ def stop_runner():
         try:
             os.kill(int(pid_str), signal.SIGKILL)
             time.sleep(1) # Giving some time for the runner to stop.
-            print(f'The runner with pid: {pid_str} has stopped.')
+            print(f'The runner with name: {name} and pid: {pid_str} has stopped.')
         except ProcessLookupError: pass
 
 
@@ -353,7 +400,10 @@ def start() -> None:
 
     assert(os.path.exists(RUNNER_FOLDER))
 
+
     with Chdir(RUNNER_FOLDER):
+        name = get_name()
+        
         date = datetime.datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
         command = [f'./run.sh > ../log-{date}.txt']
         p = subprocess.Popen(
@@ -372,7 +422,7 @@ def start() -> None:
             with open('.pid', 'w') as fp:
                 fp.write(f'{pid}')
 
-        print(f'The runner with pid: {pid} has started.')
+    print(f'The runner with name: {name} and pid: {pid} has started.')
 
 
 def setup(flags: dict[str, str]) -> None:
@@ -406,10 +456,12 @@ and remove the runner with name: {flags['name']} or use another name.''')
         if os.system(f'./config.sh --unattended {format_flags(flags)}') != 0:
             raise config_exception
         
+        name = get_name()
+        
         with open('.token', 'w') as fp:
             fp.write(flags['token'])
     
-    print('The runner has been setup.')
+    print(f'The runner with name: {name} has been setup.')
 
 
 def main() -> None:
@@ -439,5 +491,4 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    os.chdir(os.path.dirname(__file__))
     main()
