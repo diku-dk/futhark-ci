@@ -30,6 +30,10 @@ When removing the runner go [here](https://github.com/diku-dk/futhark/settings/a
 python3 runner.py --remove XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ``` 
 
+## Notes about `runner.py`
+- Currently the flag `--disableupdate` is not used, so the runner will automatically update by itself.
+- The runner group used is `Default` meaning any repository from the organization it belongs to can use the runner. This can be changed using the `--runnergroup` flag.
+
 ## Runner properties
 Some important properties to note about the self-hosted runners is.
 - The runner performs one job at a time.
