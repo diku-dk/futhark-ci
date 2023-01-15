@@ -83,8 +83,7 @@ def get_flags() -> dict[str, str]:
     parser = optparse.OptionParser()
     parser.add_option('-g', '--gpu', dest='gpu', type='string', metavar='GPU:AMOUNT',
 help='''the name of the GPU to use found here https://diku-dk.github.io/wiki/slurm-cluster
-and the specified AMOUNT of gpus formatted as GPU:AMOUNT.
-''')
+and the specified AMOUNT of gpus formatted as GPU:AMOUNT.''')
     parser.add_option('-f', '--futhark', dest='futhark', type='string', metavar='FUTHARK',
                       help='path to the binaries of the FUTHARK compiler.')
     parser.add_option('-b', '--benchmarks', dest='benchmarks', type='string', metavar='BENCHMARKS',
