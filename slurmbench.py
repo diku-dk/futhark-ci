@@ -1,5 +1,6 @@
 import optparse
 import os
+from typing import Union
 
 
 GPUS = {
@@ -13,7 +14,7 @@ GPUS = {
 }
 
 
-def is_any_none_flags(flags):
+def is_any_none_flags(flags: dict[str, Union[str, None]]) -> Union[Exception, None]:
     '''
     This function checks if any flags are none and reports an error asking for the last arguments
     if sol.
@@ -37,7 +38,7 @@ def is_any_none_flags(flags):
     return None
 
 
-def format_json_flag(flags):
+def format_json_flag(flags: dict[str, None]) -> dict[str, None]:
     flags = flags.copy()
     json = flags['json']
     flags['futhark-options'] = f'--json {json} ' + flags['futhark-options']
@@ -45,7 +46,7 @@ def format_json_flag(flags):
     return flags
 
 
-def format_gpu_flag(flags):
+def format_gpu_flag(flags: dict[str, None]) -> dict[str, None]:
     flags = flags.copy()
 
     if flags.get('gpu') is None:
@@ -77,7 +78,7 @@ def format_gpu_flag(flags):
     return flags
 
 
-def get_flags():
+def get_flags() -> dict[str, str]:
 
     parser = optparse.OptionParser()
     parser.add_option('-g', '--gpu', dest='gpu', type='string', metavar='GPU:AMOUNT',
@@ -112,7 +113,7 @@ and the specified AMOUNT of gpus formatted as GPU:AMOUNT.
     return flags
 
 
-def main():
+def main() -> None:
     flags = get_flags()
 
     futhark = flags['futhark']
@@ -123,7 +124,6 @@ def main():
     assert(not os.path.exists('temp.sh'))
     
     with open('temp.sh', mode='w') as fp:
-        fp.write('#!/bin/bash\n')
         fp.write(f'{futhark} bench {benchmarks} {futhark_options}')
     
     if os.system(f'srun {slurm_options} temp.sh') != 0:
