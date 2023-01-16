@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 assert sys.version_info >= (3, 9), "Use Python 3.9 or newer."
@@ -12,37 +12,37 @@ import subprocess
 import time
 import signal
 import json
+import shlex
 from typing import Union, Tuple
 
-'''
-The default flags depending on the hostname.
-'''
+
+# The default flags depending on the hostname.
 DEFAULT_SETTINGS = {
     'futharkhpa01fl.unicph.domain': {
-        'name': 'A100',
-        'labels': 'cuda,opencl,multicore',
+        'name': 'futhark01',
+        'labels': 'A100,cuda,opencl,multicore',
     },
     'futharkhpa02fl.unicph.domain': {
-        'name': 'MI100',
-        'labels': 'opencl,multicore',
+        'name': 'futhark02',
+        'labels': 'MI100,opencl,multicore',
     },
 }
 
-'''
-These are the commands used for installing the self-hosted runner. You may wish to update these
-commands with commands from the download box on the website.
-https://github.com/{organization}/{repository}/settings/actions/runners/new
-'''
+# These are the commands used for installing the self-hosted runner. You may wish to update these
+# commands with commands from the download box on the website.
+# https://github.com/{organization}/{repository}/settings/actions/runners/new
 INSTALLATION = \
 '''curl -o actions-runner-linux-x64-2.299.1.tar.gz -L https://github.com/actions/runner/releases/download/v2.299.1/actions-runner-linux-x64-2.299.1.tar.gz
-echo "147c14700c6cb997421b9a239c012197f11ea9854cd901ee88ead6fe73a72c74  actions-runner-linux-x64-2.299.1.tar.gz" | shasum -a 256 -c
+echo "147c14700c6cb997421b9a239c012197f11ea9854cd901ee88ead6fe73a72c74 actions-runner-linux-x64-2.299.1.tar.gz" | shasum -a 256 -c
 tar xzf ./actions-runner-linux-x64-2.299.1.tar.gz
 rm actions-runner-linux-x64-2.299.1.tar.gz'''
 
-'''
-The folder where the runner files are stored.
-'''
+# The folder where the runner files are stored.
 RUNNER_FOLDER = 'actions-runner'
+
+# The enviroment variables that will be used in each process.
+ENV = os.environ.copy()
+ENV['HOME'] = os.path.join(os.getcwd(), RUNNER_FOLDER)
 
 class Chdir:
     '''
@@ -212,6 +212,8 @@ def get_flags() -> dict[str, str]:
     if flags.get('name') is None and flags.get('labels') is None and settings is not None:
         flags['name'] = settings['name']
         flags['labels'] = settings['labels']
+        print(f'Using default settings for {hostname} where name: {settings["name"]} and labels: {settings["labels"]}')
+        print('If this was not the intention please specify name and labels.')
 
     is_valid, error = is_any_none_flags(flags)
     if not is_valid:
@@ -326,11 +328,16 @@ def remove_runner(token: str):
     with Chdir(RUNNER_FOLDER):
 
         name = get_name()
-        if os.path.exists('./config.sh') and \
-           os.system(f'./config.sh remove --token {token} > /dev/null') != 0:
-            raise Exception('Error in runner removal: If "Failed: Removing runner from the ' + 
-                            'server" try getting the token of the runner from ' + 
-                            'https://github.com/SelfHostedRunnerTest/futhark/settings/actions/runners')
+        if os.path.exists('./config.sh'):
+            process = subprocess.run(
+                ['./config.sh', 'remove', '--token', token],
+                env=ENV,
+                stdin=subprocess.PIPE
+            )
+            if process.returncode != 0:
+                raise Exception('Error in runner removal: If "Failed: Removing runner from the ' + 
+                                'server" try getting the token of the runner from ' + 
+                                'https://github.com/SelfHostedRunnerTest/futhark/settings/actions/runners')
     
     shutil.rmtree(RUNNER_FOLDER)
     print(f'The runner with name: {name} has been removed.')
@@ -365,6 +372,7 @@ def stop_runner():
             time.sleep(1) # Giving some time for the runner to stop.
             print(f'The runner with name: {name} and pid: {pid_str} has stopped.')
         except ProcessLookupError: pass
+    
 
 
 def clean_up(token: str) -> None:
@@ -406,9 +414,9 @@ def start() -> None:
         name = get_name()
         
         date = datetime.datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
-        command = [f'./run.sh > ../log-{date}.txt']
         p = subprocess.Popen(
-            command,
+            [f'./run.sh > ../log-{date}.txt'],
+            env=ENV,
             shell=True,
             stdout=subprocess.PIPE,
             stdin=subprocess.PIPE,
@@ -450,11 +458,26 @@ and remove the runner with name: {flags['name']} or use another name.''')
     os.mkdir(RUNNER_FOLDER)
 
     with Chdir(RUNNER_FOLDER):
+        
+        for command in INSTALLATION.split('\n'):
+            installation_process = subprocess.run(
+                shlex.split(command),
+                env=ENV,
+                stdin=subprocess.PIPE
+            )
 
-        if os.system(INSTALLATION.replace('\n', r'&&')) != 0:
-            raise install_exception
+            if installation_process.returncode != 0:
+                raise install_exception
+        
+        config_command = shlex.split(f'./config.sh --unattended {format_flags(flags)}')
 
-        if os.system(f'./config.sh --unattended {format_flags(flags)}') != 0:
+        config_process = subprocess.run(
+            config_command,
+            env=ENV,
+            stdin=subprocess.PIPE
+        )
+
+        if config_process.returncode != 0:
             raise config_exception
         
         name = get_name()
@@ -484,7 +507,9 @@ def main() -> None:
         clean_up(flags['remove'])
         return
 
-    if os.path.exists(RUNNER_FOLDER):
+    if os.path.exists(RUNNER_FOLDER) and len(os.listdir(RUNNER_FOLDER)) == 0:
+        os.rmdir(RUNNER_FOLDER)
+    elif os.path.exists(RUNNER_FOLDER):
         raise Exception('The old runner has to be removed before it can be setup.')
 
     setup(flags)
