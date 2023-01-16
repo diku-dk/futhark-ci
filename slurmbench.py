@@ -124,12 +124,15 @@ def main() -> None:
     with tempfile.NamedTemporaryFile() as fp:
         fp.write('#!/bin/bash\n'.encode())
         fp.write(f'{futhark} bench {benchmarks} {futhark_options}'.encode())
+        fp.flush()
     
         if os.system(f'chmod +x {fp.name}') != 0:
             raise Exception(f'Something went wrong during "chmod +x {fp.name}".')
 
         if os.system(f'srun {slurm_options} {fp.name}') != 0:
             raise Exception('Something went wrong during srun.')
+        
+        print('test')
 
 if __name__ == '__main__':
     main()
