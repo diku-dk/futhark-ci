@@ -130,7 +130,7 @@ def main() -> None:
     os.chmod(scriptFile.name, 777) 
     scriptFile.file.close()
     
-    if os.system(f'srun {slurm_options} {scriptFile.file}') != 0:
+    if os.system(f'srun {slurm_options} {scriptFile.name}') != 0:
         raise Exception('Something went wrong during srun.')
         
 
