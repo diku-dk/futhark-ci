@@ -25,19 +25,20 @@ python3 runner.py --start
 This command can also be used to restart the runner. When the runner has started the runner will put its log inside a log.txt file with the current date in the name.
 
 ### Removal
-When removing the runner go [here](https://github.com/diku-dk/futhark/settings/actions/runners) and click the three dots on the right side of the status of the runner that will be removed. Here the command `./config.sh remove --token XXXXXXXXXXXXXXXXXXXXXXXXXXXXX`, use the token to execute the folloing command with token from before.
+When removing the runner go [here](https://github.com/diku-dk/futhark/settings/actions/runners) and click the three dots on the right side of the status of the runner that will be removed. Here the command `./config.sh remove --token XXXXXXXXXXXXXXXXXXXXXXXXXXXXX`, use the token to execute the following command with token from before.
 ```
 python3 runner.py --remove XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ``` 
+It will also remove the ``RUNNER_FOLDER`` (this is a constant in the script) created in setup process of the script.
 
 ## Notes about `runner.py`
 - Currently the flag `--disableupdate` is not used, so the runner will automatically update by itself.
-- The runner group used is `Default` meaning any repository from the organization it belongs to can use the runner. This can be changed using the `--runnergroup` flag.
 
 ## Runner properties
 Some important properties to note about the self-hosted runners is.
+- If the token was found from the repository's settings page then only the repository will have access to the runner.
 - The runner performs one job at a time.
-- A token used to setup and remove runenrs do not work forever.
+- A token used to setup and remove runners do not work forever.
 - The runners can not be setup in the same folder because of files like `.runner` (there may be other reasons).
 - Tokens can be reused for setup and removal.
 - Working directory is not cleared from one run to the next. Example of this is when running the job:
