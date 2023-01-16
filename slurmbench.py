@@ -120,14 +120,12 @@ def main() -> None:
     benchmarks = flags['benchmarks']
     futhark_options = flags['futhark-options']
     slurm_options = flags['slurm-options']
-
-    assert(not os.path.exists('temp.sh'))
     
     with tempfile.NamedTemporaryFile() as fp:
-        fp.write('#!/bin/bash\n')
-        fp.write(f'{futhark} bench {benchmarks} {futhark_options}')
+        fp.write('#!/bin/bash\n'.encode())
+        fp.write(f'{futhark} bench {benchmarks} {futhark_options}'.encode())
     
-        if os.system(f'chmod +x temp.sh') != 0:
+        if os.system(f'chmod +x {fp.name}') != 0:
             raise Exception(f'Something went wrong during "chmod +x {fp.name}".')
 
         if os.system(f'srun {slurm_options} {fp.name}') != 0:
