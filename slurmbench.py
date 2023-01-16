@@ -121,15 +121,19 @@ def main() -> None:
     futhark_options = flags['futhark-options']
     slurm_options = flags['slurm-options']
     
-    fp = tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=True)
-    fp.write('#!/bin/bash\n')
-    fp.write(f'{futhark} bench {benchmarks} {futhark_options}')
-    fp.flush()
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=True) as fp:
+        fp.write('#!/bin/bash\n')
+        fp.write('#SBATCH\n')
+        fp.write('module load python/3.9.9\n')
+        fp.write('module load cuda/11.8\n')
+        fp.write(f'{futhark} bench {benchmarks} {futhark_options}')
+        fp.flush()
 
-    os.chmod(fp.name, 777) 
+        os.chmod(fp.name, 777) 
+        os.system(f'cat {fp.name}')
     
-    if os.system(f'srun {slurm_options} {fp.name}') != 0:
-        raise Exception('Something went wrong during srun.')
+        if os.system(f'sbatch {slurm_options} {fp.name}') != 0:
+            raise Exception('Something went wrong during srun.')
     
     fp.close()
 
