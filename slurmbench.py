@@ -121,10 +121,10 @@ def main() -> None:
     futhark_options = flags['futhark-options']
     slurm_options = flags['slurm-options']
     
-    fp = tempfile.NamedTemporaryFile(delete=True)
-    with open(fp.file, 'w') as fp:
-        fp.write('#!/bin/bash\n')
-        fp.write(f'{futhark} bench {benchmarks} {futhark_options}')
+    fp = tempfile.NamedTemporaryFile(mode='', prefix='sh', delete=True)
+    fp.write('#!/bin/bash\n'.encode())
+    fp.write(f'{futhark} bench {benchmarks} {futhark_options}'.encode())
+    fp.flush()
 
     os.chmod(fp.name, 777) 
     
