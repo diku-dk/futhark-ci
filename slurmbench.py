@@ -121,16 +121,17 @@ def main() -> None:
     futhark_options = flags['futhark-options']
     slurm_options = flags['slurm-options']
     
-    with tempfile.NamedTemporaryFile() as fp:
-        fp.write('#!/bin/bash\n'.encode())
-        fp.write(f'{futhark} bench {benchmarks} {futhark_options}'.encode())
-        fp.flush()
-    
-        if os.system(f'chmod +x {fp.name}') != 0:
-            raise Exception(f'Something went wrong during "chmod +x {fp.name}".')
+    scriptFile = tempfile.NamedTemporaryFile(delete=True)
+    with open(scriptFile.name, 'w') as fp:
+        fp.write('#!/bin/bash\n')
+        fp.write(f'{futhark} bench {benchmarks} {futhark_options}')
 
-        if os.system(f'srun {slurm_options} {fp.name}') != 0:
-            raise Exception('Something went wrong during srun.')
+    
+    os.chmod(scriptFile.name, 777) 
+    scriptFile.file.close()
+    
+    if os.system(f'srun {slurm_options} {scriptFile.file}') != 0:
+        raise Exception('Something went wrong during srun.')
         
 
 if __name__ == '__main__':
