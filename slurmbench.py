@@ -1,5 +1,6 @@
 import optparse
 import os
+import tempfile
 from typing import Union
 
 
@@ -122,17 +123,15 @@ def main() -> None:
 
     assert(not os.path.exists('temp.sh'))
     
-    with open('temp.sh', mode='w') as fp:
+    with tempfile.NamedTemporaryFile() as fp:
         fp.write('#!/bin/bash\n')
         fp.write(f'{futhark} bench {benchmarks} {futhark_options}')
     
-    if os.system(f'chmod +x temp.sh') != 0:
-        raise Exception('Something went wrong during "chmod +x temp.sh".')
+        if os.system(f'chmod +x temp.sh') != 0:
+            raise Exception(f'Something went wrong during "chmod +x {fp.name}".')
 
-    if os.system(f'srun {slurm_options} temp.sh') != 0:
-        raise Exception('Something went wrong during srun.')
-        
-    os.remove('temp.sh')
+        if os.system(f'srun {slurm_options} {fp.name}') != 0:
+            raise Exception('Something went wrong during srun.')
 
 if __name__ == '__main__':
     main()
