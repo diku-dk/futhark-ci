@@ -132,7 +132,6 @@ def main() -> None:
         if os.system(f'srun {slurm_options} {fp.name}') != 0:
             raise Exception('Something went wrong during srun.')
         
-        print('test')
 
 if __name__ == '__main__':
     main()
