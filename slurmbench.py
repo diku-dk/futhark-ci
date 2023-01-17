@@ -123,20 +123,13 @@ def main() -> None:
     futhark_options = flags['futhark-options']
     slurm_options = flags['slurm-options']
     
-    os.system('module load python/3.9.9')
-    os.system('module load cuda/11.8')
-
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=True) as fp:
-        fp.write('#!/bin/bash\n')
-        fp.write(f'#SBATCH --wait --output=/dev/stdout {slurm_options}\n')
-        fp.write(f'{futhark} bench {benchmarks} {futhark_options}\n')
-        fp.flush()
-
-        os.chmod(fp.name, 777)
-
-        subprocess.check_output(f'sbatch {fp.name}')
+    with open('temp.sh', mode='w') as fp:
+        fp.write(f'{futhark} bench {benchmarks} {futhark_options}')
     
-    fp.close()
+    if os.system(f'srun {slurm_options} temp.sh') != 0:
+        raise Exception('Something went wrong during srun.')
+        
+    os.remove('temp.sh')
 
 if __name__ == '__main__':
     main()
