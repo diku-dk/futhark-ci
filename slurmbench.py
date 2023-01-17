@@ -119,7 +119,10 @@ def main() -> None:
     slurm_options = flags['slurm-options']
     
     with open('temp.sh', mode='w') as fp:
+        fp.write('#!/bin/bash\n')
         fp.write(f'{futhark} bench {benchmarks} {futhark_options}')
+    
+    os.chmod('temp.sh', 777)
     
     if os.system(f'srun {slurm_options} temp.sh') != 0:
         raise Exception('Something went wrong during srun.')
