@@ -10,7 +10,8 @@ GPUS = {
     'titanx',
     'testlak40',
     'testlak20',
-    'gtx1080'
+    'gtx1080',
+    'gpu'
 }
 
 
