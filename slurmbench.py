@@ -128,7 +128,7 @@ def main() -> None:
 
     with tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=True) as fp:
         fp.write('#!/bin/bash\n')
-        fp.write(f'#SBATCH --wait --output=/dev/stdout {slurm_options}\n')
+        fp.write(f'#SBATCH {slurm_options}\n')
         fp.write(f'{futhark} bench {benchmarks} {futhark_options}\n')
         fp.flush()
 
