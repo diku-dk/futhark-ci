@@ -134,11 +134,11 @@ def main() -> None:
 
         os.chmod(fp.name, 777)
 
-        if os.system(f'sbatch {fp.name}') != 0:
-            raise Exception('Something went wrong during sbatch.')
-        
+        os.system(f'sbatch {fp.name}')
+        jobid = subprocess.check_output(['squeue', '--me', '-h', '-o', r'"%i"'])
+
         p = subprocess.Popen(
-            ['squeue', '--me', '-h', '-o', r'"%i"', '|', 'xargs', 'attach'],
+            ['attach', jobid],
             stderr=sys.stderr,
             stdin=sys.stdin,
             stdout=sys.stdout
