@@ -102,15 +102,15 @@ and the specified AMOUNT of gpus formatted as GPU:AMOUNT.''')
     (flags, _) = parser.parse_args()
     flags = flags.__dict__
 
-    flags_copy = flags.copy()
-    flags_copy.pop('futhark-options')
-    flags_copy.pop('slurm-options')
     flags = format_gpu_flag(flags)
-    flags = format_json_flag(flags)
-
+    
+    flags_copy = flags.copy()
+    
     error = is_any_none_flags(flags_copy)
     if error is not None:
         raise error
+    
+    flags = format_json_flag(flags)
     
     return flags
 
@@ -128,22 +128,13 @@ def main() -> None:
 
     with tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=True) as fp:
         fp.write('#!/bin/bash\n')
-        fp.write(f'#SBATCH {slurm_options}\n')
+        fp.write(f'#SBATCH --wait --output=/dev/stdout {slurm_options}\n')
         fp.write(f'{futhark} bench {benchmarks} {futhark_options}\n')
         fp.flush()
 
         os.chmod(fp.name, 777)
 
-        os.system(f'sbatch {fp.name}')
-        jobid = subprocess.check_output(['squeue', '--me', '-h', '-o', r'"%i"'])
-
-        p = subprocess.Popen(
-            ['attach', jobid],
-            stderr=sys.stderr,
-            stdin=sys.stdin,
-            stdout=sys.stdout
-        )
-        p.wait()
+        subprocess.check_output(f'sbatch {fp.name}')
     
     fp.close()
 
