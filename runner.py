@@ -26,6 +26,10 @@ DEFAULT_SETTINGS = {
         'name': 'futhark02',
         'labels': 'MI100,opencl,multicore',
     },
+    'futharkhpa03fl.unicph.domain': {
+        'name': 'futhark03',
+        'labels': 'A100,cuda,opencl,multicore',
+    },
 }
 
 # These are the commands used for installing the self-hosted runner. You may wish to update these
