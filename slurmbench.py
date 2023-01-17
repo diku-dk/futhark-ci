@@ -131,7 +131,7 @@ def main() -> None:
 
         os.chmod(fp.name, 777)
 
-        if os.system(f'srun {slurm_options} {fp.name}') != 0:
+        if os.system(f'srun --bcast={fp.name} {slurm_options} {os.path.basename(fp.name)}') != 0:
             raise Exception('Something went wrong during srun.')
     
     fp.close()
