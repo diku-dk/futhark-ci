@@ -122,7 +122,8 @@ def main() -> None:
         fp.write('#!/bin/bash\n')
         fp.write(f'{futhark} bench {benchmarks} {futhark_options}')
     
-    os.chmod('temp.sh', 777)
+    # for some reason os.chmod does not work.
+    os.system('chmod +x temp.sh')
     
     if os.system(f'srun {slurm_options} temp.sh') != 0:
         raise Exception('Something went wrong during srun.')
