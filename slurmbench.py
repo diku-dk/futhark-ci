@@ -1,8 +1,5 @@
 import optparse
 import os
-import tempfile
-import subprocess
-import sys
 from typing import Union
 
 
@@ -104,9 +101,7 @@ and the specified AMOUNT of gpus formatted as GPU:AMOUNT.''')
 
     flags = format_gpu_flag(flags)
     
-    flags_copy = flags.copy()
-    
-    error = is_any_none_flags(flags_copy)
+    error = is_any_none_flags(flags)
     if error is not None:
         raise error
     
