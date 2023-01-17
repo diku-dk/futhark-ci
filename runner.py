@@ -40,9 +40,18 @@ rm actions-runner-linux-x64-2.299.1.tar.gz'''
 # The folder where the runner files are stored.
 RUNNER_FOLDER = 'actions-runner'
 
+def replace_home(env: dict, new_home: str):
+    env = env.copy()
+    old_home = env['HOME']
+
+    for key, val in env.items():
+        env[key] = val.replace(old_home, new_home)
+    
+    return env
+
 # The enviroment variables that will be used in each process.
-ENV = os.environ.copy()
-ENV['HOME'] = os.path.join(os.getcwd(), RUNNER_FOLDER)
+ENV = replace_home(os.environ, os.path.join(os.getcwd(), RUNNER_FOLDER))
+
 
 class Chdir:
     '''
