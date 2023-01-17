@@ -35,11 +35,13 @@ DEFAULT_SETTINGS = {
 # These are the commands used for installing the self-hosted runner. You may wish to update these
 # commands with commands from the download box on the website.
 # https://github.com/{organization}/{repository}/settings/actions/runners/new
+version='2.300.2'
+shasum='ed5bf2799c1ef7b2dd607df66e6b676dff8c44fb359c6fedc9ebf7db53339f0c'
 INSTALLATION = \
-'''curl -o actions-runner-linux-x64-2.299.1.tar.gz -L https://github.com/actions/runner/releases/download/v2.299.1/actions-runner-linux-x64-2.299.1.tar.gz
-echo "147c14700c6cb997421b9a239c012197f11ea9854cd901ee88ead6fe73a72c74 actions-runner-linux-x64-2.299.1.tar.gz" | shasum -a 256 -c
-tar xzf ./actions-runner-linux-x64-2.299.1.tar.gz
-rm actions-runner-linux-x64-2.299.1.tar.gz'''
+f'''curl -o actions-runner-linux-x64-{version}.tar.gz -L https://github.com/actions/runner/releases/download/v{version}/actions-runner-linux-x64-{version}.tar.gz
+echo "{shasum} actions-runner-linux-x64-{version}.tar.gz" | shasum -a 256 -c
+tar xzf ./actions-runner-linux-x64-{version}.tar.gz
+rm actions-runner-linux-x64-{version}.tar.gz'''
 
 # The folder where the runner files are stored.
 RUNNER_FOLDER = 'actions-runner'
@@ -483,6 +485,9 @@ and remove the runner with name: {flags['name']} or use another name.''')
                 raise install_exception
         
         config_command = shlex.split(f'./config.sh --unattended {format_flags(flags)}')
+
+        print('Running command')
+        print(' '.join(config_command))
 
         config_process = subprocess.run(
             config_command,
