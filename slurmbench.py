@@ -73,7 +73,11 @@ def format_gpu_flag(flags: dict[str, None]) -> dict[str, None]:
     elif not num_of_gpus.isnumeric():
         raise Exception(f'{num_of_gpus} is not a valid number of GPUs.')
     
-    flags['slurm-options'] = f'-p gpu --gres=gpu:{name}:{num_of_gpus} ' + flags['slurm-options']
+    if name == 'gpu':
+        flags['slurm-options'] = f'-p gpu --gres=gpu:{name}:{num_of_gpus} ' + flags['slurm-options']
+    else:
+        flags['slurm-options'] = f'-p gpu --gres=gpu:{num_of_gpus} ' + flags['slurm-options']
+    
     flags['slurm-options'] = flags['slurm-options'].strip()
 
     return flags
