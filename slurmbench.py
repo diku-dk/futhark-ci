@@ -1,6 +1,8 @@
 import optparse
 import os
 import tempfile
+import subprocess
+import sys
 from typing import Union
 
 
@@ -132,8 +134,16 @@ def main() -> None:
 
         os.chmod(fp.name, 777)
 
-        if os.system(f'sbatch {os.path.basename(fp.name)}') != 0:
+        if os.system(f'sbatch {fp.name}') != 0:
             raise Exception('Something went wrong during sbatch.')
+        
+        p = subprocess.Popen(
+            ['squeue', '--me', '-h', '-o', r'"%i"', '|', 'xargs', 'attach'],
+            stderr=sys.stderr,
+            stdin=sys.stdin,
+            stdout=sys.stdout
+        )
+        p.wait()
     
     fp.close()
 
