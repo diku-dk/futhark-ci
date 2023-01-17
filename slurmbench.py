@@ -126,13 +126,14 @@ def main() -> None:
 
     with tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=True) as fp:
         fp.write('#!/bin/bash\n')
-        fp.write(f'{futhark} bench {benchmarks} {futhark_options}')
+        fp.write(f'#SBATCH --wait --output=/dev/stdout {slurm_options}\n')
+        fp.write(f'{futhark} bench {benchmarks} {futhark_options}\n')
         fp.flush()
 
         os.chmod(fp.name, 777)
 
-        if os.system(f'srun --bcast={fp.name} {slurm_options} {os.path.basename(fp.name)}') != 0:
-            raise Exception('Something went wrong during srun.')
+        if os.system(f'sbatch {os.path.basename(fp.name)}') != 0:
+            raise Exception('Something went wrong during sbatch.')
     
     fp.close()
 
