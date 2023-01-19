@@ -21,18 +21,6 @@ runs:
     - uses: actions/download-artifact@v3
       with:
         name: futhark-nightly-linux-x86_64.tar.xz
-    - name: Setup compiler
-      shell: bash
-      run: |
-        tar xvf futhark-nightly-linux-x86_64.tar.xz
-    - name: Get data
-      shell: bash
-      run: |
-        cd futhark-benchmarks && pwd && ./get-data.sh external-data.txt
-    - name: Debug
-      shell: bash
-      run: |
-        env
     - name: Save slurmbench.py
       shell: bash
       run: |
@@ -40,7 +28,7 @@ runs:
     - name: Run benchmarks
       shell: bash
       run: |
-        python3.9 slurmbench.py --gpu=titanrtx --futhark="$PWD/futhark-nightly-linux-x86_64/bin" --slurm-options='' --futhark-options='--ignore-files /lib/ --backend=${{inputs.backend}} --exclude no_${{inputs.system}} ${{inputs.options}}' --json=futhark-${{inputs.backend}}-${{inputs.system}}-$GITHUB_SHA.json --benchmarks=futhark-benchmarks
+        python3.9 slurmbench.py --gpu=titanrtx --futhark="$PWD/futhark-nightly-linux-x86_64.tar.xz" --slurm-options='' --futhark-options='--ignore-files /lib/ --backend=${{inputs.backend}} --exclude no_${{inputs.system}} ${{inputs.options}}' --json=futhark-${{inputs.backend}}-${{inputs.system}}-$GITHUB_SHA.json --benchmarks=futhark-benchmarks
     - uses: actions/upload-artifact@v1
       with:
         name: futhark-${{inputs.backend}}-${{inputs.system}}-${{ github.sha }}.json
