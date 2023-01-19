@@ -184,7 +184,7 @@ def main() -> None:
     print(f'Current Working Directory: {cwd}')
 
     futhark_folder = 'futhark-nightly'
-    if not os.path.exist(futhark_folder):
+    if not os.path.exists(futhark_folder):
         os.mkdir(futhark_folder)
 
     print('Extracting Futhark Binaries:')
@@ -204,7 +204,7 @@ def main() -> None:
         raise Exception(f'Something went wrong during "{get_data_command}".')
 
     print('Enviroment Variables:')
-    for var, val in os.environ:
+    for var, val in os.environ.items():
         print(f'{var}={val}')
 
     script = 'temp.sh'
