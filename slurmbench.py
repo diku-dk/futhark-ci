@@ -193,15 +193,16 @@ def main() -> None:
     
     futhark_bin = os.path.join(futhark_folder, 'bin', 'futhark')
 
-    get_data_script = os.path.join('.', benchmarks, "get-data.sh")
-
+    get_data_script = "get-data.sh"
+    os.chdir(benchmarks)
     if not os.path.exists(get_data_script):
         raise Exception(f'The script "{get_data_script}" does not exist.')
 
     print('Getting Benchmark Data:')
-    get_data_command = f'{get_data_script} external-data.txt'
+    get_data_command = f'./{get_data_script} external-data.txt'
     if os.system(get_data_command) != 0:
         raise Exception(f'Something went wrong during "{get_data_command}".')
+    os.chdir(cwd)
 
     print('Enviroment Variables:')
     for var, val in os.environ.items():
