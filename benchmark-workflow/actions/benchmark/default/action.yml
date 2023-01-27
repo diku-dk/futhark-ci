@@ -1,4 +1,4 @@
-name: 'Benchmark'
+name: 'Default Benchmark'
 description: 'Run benchmark suite'
 inputs:
   backend:
@@ -14,21 +14,22 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
-        fetch-depth: 0
     - uses: actions/download-artifact@v3
       with:
         name: futhark-nightly-linux-x86_64.tar.xz
-    - name: Save slurmbench.py
+    - name: Setup compiler
       shell: bash
       run: |
-        curl https://raw.githubusercontent.com/diku-dk/futhark-ci/slurm/slurmbench.py > slurmbench.py
+        tar xvf futhark-nightly-linux-x86_64.tar.xz
+        echo "$PWD/futhark-nightly-linux-x86_64/bin" >> $GITHUB_PATH
+    - name: Get data
+      shell: bash
+      run: |
+        cd futhark-benchmarks && pwd && ./get-data.sh external-data.txt
     - name: Run benchmarks
       shell: bash
       run: |
-        python3.9 slurmbench.py --gpu=titanrtx --futhark="$PWD/futhark-nightly-linux-x86_64.tar.xz" --slurm-options='' --futhark-options='--ignore-files /lib/ --backend=${{inputs.backend}} --exclude no_${{inputs.system}} ${{inputs.options}}' --json=futhark-${{inputs.backend}}-${{inputs.system}}-$GITHUB_SHA.json --benchmarks=futhark-benchmarks
+        futhark bench futhark-benchmarks --ignore-files /lib/ --backend=${{inputs.backend}} --json futhark-${{inputs.backend}}-${{inputs.system}}-$GITHUB_SHA.json --exclude no_${{inputs.system}} ${{inputs.options}}
     - uses: actions/upload-artifact@v1
       with:
         name: futhark-${{inputs.backend}}-${{inputs.system}}-${{ github.sha }}.json

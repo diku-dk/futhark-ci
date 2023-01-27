@@ -181,17 +181,6 @@ def main() -> None:
     slurm_options = flags['slurm-options']
 
     cwd = os.getcwd()
-    print(f'Current Working Directory: {cwd}')
-
-    futhark_folder = 'futhark-nightly'
-    if not os.path.exists(futhark_folder):
-        os.mkdir(futhark_folder)
-
-    print('Extracting Futhark Binaries:')
-    if os.system(f'tar xvf {futhark} -C {futhark_folder} --strip-components 1') != 0:
-        raise Exception(f'Something went wrong during extraction of {futhark}')
-    
-    futhark_bin = os.path.join(futhark_folder, 'bin', 'futhark')
 
     get_data_script = "get-data.sh"
     os.chdir(benchmarks)
@@ -204,14 +193,10 @@ def main() -> None:
         raise Exception(f'Something went wrong during "{get_data_command}".')
     os.chdir(cwd)
 
-    print('Enviroment Variables:')
-    for var, val in os.environ.items():
-        print(f'{var}={val}')
-
     script = 'temp.sh'
     with open(script, mode='w') as fp:
         fp.write('#!/bin/bash\n')
-        fp.write(f'{futhark_bin} bench {benchmarks} {futhark_options}')
+        fp.write(f'{futhark} bench {benchmarks} {futhark_options}')
     
     os.chmod(script, os.stat(script).st_mode | stat.S_IEXEC)
     
