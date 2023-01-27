@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build-linux-nix:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+    
+    - name: Download Futhark
+      run: wget https://futhark-lang.org/releases/futhark-nightly-linux-x86_64.tar.xz
+
+    - uses: actions/upload-artifact@v1
+      with:
+        name: futhark-nightly-linux-x86_64.tar.xz
+        path: futhark-nightly-linux-x86_64.tar.xz
+
+  benchmark-A100-cuda:
+    runs-on: A100
+    needs: [build-linux-nix]
+    if: github.repository == 'SelfHostedRunnerTest/futhark' && !github.event.pull_request.draft
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+    - uses: ./.github/actions/benchmark
+      with:
+        backend: cuda
+        system: A100
+        slurm: -p gpu --gres=gpu:titanrtx:1
+
+  benchmark-A100-opencl:
+    runs-on: A100
+    needs: [build-linux-nix]
+    if: github.repository == 'SelfHostedRunnerTest/futhark' && !github.event.pull_request.draft
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+    - uses: ./.github/actions/benchmark
+      with:
+        backend: opencl
+        system: A100
+        slurm: -p gpu --gres=gpu:titanrtx:1
+
+  benchmark-MI100-opencl:
+    runs-on: MI100
+    needs: [build-linux-nix]
+    if: github.repository == 'SelfHostedRunnerTest/futhark' && !github.event.pull_request.draft
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+    - uses: ./.github/actions/benchmark
+      with:
+        backend: opencl
+        system: MI100
+        slurm: -p gpu --gres=gpu:titanrtx:1
+  
+  benchmark-results:
+    runs-on: ubuntu-22.04
+    needs: [benchmark-A100-cuda, benchmark-A100-opencl, benchmark-MI100-opencl]
+    if: github.ref == 'refs/heads/master' && ${{ always() }}
+    steps:
+    - run: |
+        ls -R
+    - name: Prepare package
+      run: |
+        mkdir -p package
+        cp */futhark-*.json package/
+        gzip package/*.json
+        for x in package/*.json.gz; do cp $x $(echo $x | sed "s/$GITHUB_SHA/latest/"); done
+   
