@@ -88,11 +88,11 @@ def format_gpu_flag(flags: dict[str, None]) -> dict[str, None]:
 
     flags = flags.copy()
 
-    if flags.get('gpu') is None:
+    if flags.get('gpu') is None or flags.get('gpu').lower() == 'none':
         flags.pop('gpu')
         return flags
     
-    gpu = flags.pop('gpu')
+    gpu = flags.pop('gpu').lower()
     gpu_args = gpu.split(':')
     if len(gpu_args) > 2:
         raise Exception(f'{gpu} must be given as GPU:AMOUNT or just a GPU name.')
