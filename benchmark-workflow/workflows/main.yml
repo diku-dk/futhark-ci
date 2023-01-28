@@ -23,7 +23,7 @@ jobs:
         path: futhark-nightly-linux-x86_64.tar.xz
 
   benchmark-titanx-cuda:
-    runs-on: [titanx]
+    runs-on: [titanx, cuda]
     needs: [build-linux-nix]
     if: github.repository == 'SelfHostedRunnerTest/futhark' && !github.event.pull_request.draft
     steps:
@@ -35,10 +35,10 @@ jobs:
       with:
         backend: cuda
         system: titanx
-        slurmbench: titanx
+        gpu: titanx
 
   benchmark-titanrtx-opencl:
-    runs-on: [titanrtx]
+    runs-on: [titanrtx, opencl]
     needs: [build-linux-nix]
     if: github.repository == 'SelfHostedRunnerTest/futhark' && !github.event.pull_request.draft
     steps:
@@ -50,11 +50,11 @@ jobs:
       with:
         backend: opencl
         system: titanrtx
-        slurmbench: titanrtx:1
+        gpu: titanrtx:1
   
   benchmark-results:
     runs-on: ubuntu-22.04
-    needs: [benchmark-A100-cuda, benchmark-A100-opencl, benchmark-MI100-opencl]
+    needs: [benchmark-titanrtx-opencl, benchmark-titanx-cuda]
     if: github.ref == 'refs/heads/master' && ${{ always() }}
     steps:
     - uses: actions/download-artifact@v3
