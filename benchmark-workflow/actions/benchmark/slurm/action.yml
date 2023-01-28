@@ -1,5 +1,5 @@
 name: 'Slurm Benchmark'
-description: 'Run benchmark suite'
+description: 'Run slurm benchmark suite'
 inputs:
   backend:
     description: 'Backend to use'
