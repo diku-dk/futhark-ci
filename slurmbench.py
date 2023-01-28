@@ -206,5 +206,6 @@ def main() -> None:
         
     os.remove(script)
 
+
 if __name__ == '__main__':
     main()
