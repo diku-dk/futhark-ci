@@ -1,5 +1,5 @@
 name: 'Default Benchmark'
-description: 'Run benchmark suite'
+description: 'Run default benchmark suite'
 inputs:
   backend:
     description: 'Backend to use'
