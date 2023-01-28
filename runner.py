@@ -355,7 +355,7 @@ def remove_runner(token: str):
                                 'https://github.com/SelfHostedRunnerTest/futhark/settings/actions/runners')
     
     shutil.rmtree(RUNNER_FOLDER)
-    print(f'The runner with name: {name} has been removed.')
+    print(f'The runner named {name} has been removed.')
 
 
 def stop_runner():
@@ -383,9 +383,12 @@ def stop_runner():
             return
         
         try:
-            os.kill(int(pid_str), signal.SIGKILL)
+            pid = find_child_search(int(pid_str), 'Runner.Listener')
+            if pid is None:
+                return
+            os.kill(pid, signal.SIGKILL)
             time.sleep(1) # Giving some time for the runner to stop.
-            print(f'The runner with name: {name} and pid: {pid_str} has stopped.')
+            print(f'The runner named {name} has stopped.')
         except ProcessLookupError: pass
     
 
@@ -440,13 +443,11 @@ def start() -> None:
 
         time.sleep(1) # Letting the process have some time to start up and then search for it's 
                       # childrens pids
-        pid = find_child_search(p.pid, 'Runner.Listener')
         
-        if pid is not None:
-            with open('.pid', 'w') as fp:
-                fp.write(f'{pid}')
+        with open('.pid', 'w') as fp:
+            fp.write(f'{p.pid}')
 
-    print(f'The runner with name: {name} and pid: {pid} has started.')
+    print(f'The runner named {name} has started.')
 
 
 def setup(flags: dict[str, str]) -> None:
@@ -503,7 +504,7 @@ and remove the runner with name: {flags['name']} or use another name.''')
         with open('.token', 'w') as fp:
             fp.write(flags['token'])
     
-    print(f'The runner with name: {name} has been setup.')
+    print(f'The runner named {name} has been setup.')
 
 
 def main() -> None:
