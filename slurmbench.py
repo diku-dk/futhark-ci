@@ -6,22 +6,24 @@ assert sys.version_info >= (3, 9), "Use Python 3.9 or newer."
 import optparse
 import os
 import stat
-from typing import Union
+from typing import Optional
 
 
-GPUS = {
-    'a100',
-    'a40',
-    'titanrtx',
-    'titanx',
-    'testlak40',
-    'testlak20',
-    'gtx1080',
-    'gpu'
+FUTHARK_OPTIONS = {
+    'backend': 'backend',
+    'ignore-files': 'ignore-files',
+    'exclude': 'excludes',
+    'json': 'json'
 }
 
 
-def is_any_none_flags(flags: dict[str, Union[str, None]]) -> Union[Exception, None]:
+SLURM_OPTIONS = {
+    'gres': 'gres',
+    'parition': 'partition'
+}
+
+
+def is_any_none_flags(flags: dict[str, Optional[str]]) -> Optional[Exception]:
     '''
     This function checks if any flags are none and reports an error asking for the last arguments
     if sol.
@@ -45,84 +47,14 @@ def is_any_none_flags(flags: dict[str, Union[str, None]]) -> Union[Exception, No
     return None
 
 
-def format_json_flag(flags: dict[str, None]) -> dict[str, None]:
-    '''
-    Given the dictionary of flags it will take the json flags and format it into the 
-    futhark-options flag.
-    Parameters
-    ----------
-    flags : dict[str, Union[str, None]]
-        The flags which have been passed to the script.
-    
-    Returns
-    -------
-    dict[str, None]
-        The new formatted flags.
-    '''
-
+def collapse_flags(flags: dict[str, Optional[str]],
+                   mapping: dict[str, str],
+                   collapsed: str) -> dict[str, Optional[str]]:
     flags = flags.copy()
-    json = flags.get('json')
-    if json is None:
-        raise Exception('The json flags must be set.')
-    flags['futhark-options'] = f'--json {json} ' + flags['futhark-options']
-    flags['futhark-options'] = flags['futhark-options'].strip()
-    return flags
-
-
-def format_gpu_flag(flags: dict[str, None]) -> dict[str, None]:
-    '''
-    Given the dictionary of flags it will take the json flags and format it into the 
-    slurm-options flag. 
-    
-    Examples:
-    --gpu=somegpu becomes --gres=gpu:somegpu:1
-    --gpu=somegpu:2 becomes --gres=gpu:somegpu:2
-    --gpu=gpu becomes --gres=gpu:1
-    --gpu=gpu:3 becomes --gres=gpu:3
-    
-    Parameters
-    ----------
-    flags : dict[str, None]
-        The flags which have been passed to the script.
-    
-    Returns
-    -------
-    dict[Exception, None]
-        The new formatted flags.
-    '''
-
-    flags = flags.copy()
-
-    if flags.get('gpu') is None or flags.get('gpu').lower() == 'none':
-        flags.pop('gpu')
-        return flags
-    
-    gpu = flags.pop('gpu').lower()
-    gpu_args = gpu.split(':')
-    if len(gpu_args) > 2:
-        raise Exception(f'{gpu} must be given as GPU:AMOUNT or just a GPU name.')
-    
-    name = ''
-    num_of_gpus = ''
-    if len(gpu_args) == 1:
-        name = gpu_args[0]
-        num_of_gpus = '1'
-    else:
-        name = gpu_args[0]
-        num_of_gpus = gpu_args[1]
-    
-    if name not in GPUS:
-        raise Exception(f'{name} is not a valid GPU.')
-    elif not num_of_gpus.isnumeric():
-        raise Exception(f'{num_of_gpus} is not a valid number of GPUs.')
-    
-    if name == 'gpu':
-        flags['slurm-options'] = f'-p gpu --gres=gpu:{num_of_gpus} ' + flags['slurm-options']
-    else:
-        flags['slurm-options'] = f'-p gpu --gres=gpu:{name}:{num_of_gpus} ' + flags['slurm-options']
-    
-    flags['slurm-options'] = flags['slurm-options'].strip()
-
+    for flag in flags.copy().keys():
+        if mapping.get(flag) is not None:
+            flags[collapsed] += f' --{mapping[flag]}={flags.pop(flag)}'
+    flags[collapsed] = flags[collapsed].strip()
     return flags
 
 
@@ -147,32 +79,42 @@ def get_flags() -> dict[str, str]:
     '''
 
     parser = optparse.OptionParser()
-    parser.add_option('-g', '--gpu', dest='gpu', type='string', metavar='GPU:AMOUNT',
-                      help=('the name of the GPU to use found here '
-                            'https://diku-dk.github.io/wiki/slurm-cluster '
-                            'and the specified AMOUNT of gpus formatted as GPU:AMOUNT.'))
-    parser.add_option('-f', '--futhark', dest='futhark', type='string', metavar='FUTHARK',
-                      help='path to tar file with the binaries of the FUTHARK.')
-    parser.add_option('-b', '--benchmarks', dest='benchmarks', type='string', metavar='BENCHMARKS',
-                      help='path to the BENCHMARKS.')
-    parser.add_option('--fo', '--futhark-options', dest='futhark-options', type='string', default='',
+    parser.add_option('--gres', dest='gres', type='string', metavar='GRES',
+                      help=('The flags corresponding to GRES found here '
+                            'https://slurm.schedmd.com/srun.html '))
+    parser.add_option('--futhark', dest='futhark', type='string', metavar='FILE',
+                      help='Path to tar FILE with the binaries of the futhark.')
+    parser.add_option('--benchmarks', dest='benchmarks', type='string', metavar='PATH',
+                      help='PATH to the benchmarks.')
+    parser.add_option('--futhark-options', dest='futhark-options', type='string', default='',
                       metavar='FUTHARK-OPTIONS',
-                      help='the FUTHARK-OPTIONS that will be passed to the futhark compiler.')
-    parser.add_option('-j', '--json', dest='json', type='string', metavar='JSON',
-                      help='the path to where the JSON file will go.')
-    parser.add_option('--so', '--slurm-options', dest='slurm-options', type='string', default='',
+                      help='The options that will be passed to the futhark compiler.')
+    parser.add_option('--json', dest='json', type='string', metavar='FILE',
+                      help='The path to where the json FILE will go.')
+    parser.add_option('--slurm-options', dest='slurm-options', type='string', default='',
                       metavar='SLURM-OPTIONS',
-                      help='the SLURM-OPTIONS that will be passed to slurm.')
+                      help='The options that will be passed to slurm.')
+    parser.add_option('--exclude', dest='exclude', type='string', metavar='EXCLUDE',
+                      help=('Do not run test cases that contain the given tag. Cases marked with '
+                            '“nobench”, “disable”, or “no_foo” (where foo is the backend used) are '
+                            'ignored by default..'))
+    parser.add_option('--backend', dest='backend', type='string', metavar='BACKEND',
+                      help=('The BACKEND used when compiling Futhark programs (without leading '
+                            'futhark, e.g. just opencl).'))
+    parser.add_option('--ignore-files', dest='ignore-files', type='string', metavar='PATH',
+                      help='Ignore files whose PATH match the given regular expression.')
+    parser.add_option('--parition', dest='parition', type='string', metavar='NAME',
+                      help='Request a specific partition for the resource allocation.')
+                      
     (flags, _) = parser.parse_args()
     flags = flags.__dict__
-
-    flags = format_gpu_flag(flags)
     
+    flags = collapse_flags(flags, SLURM_OPTIONS, 'slurm-options')
+    flags = collapse_flags(flags, FUTHARK_OPTIONS, 'futhark-options')
+
     error = is_any_none_flags(flags)
     if error is not None:
         raise error
-    
-    flags = format_json_flag(flags)
     
     return flags
 
