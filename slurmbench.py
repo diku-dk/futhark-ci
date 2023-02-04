@@ -111,7 +111,7 @@ def get_flags() -> dict[str, str]:
 
     slurm_options_mapping = {
         'gres': 'gres',
-        'parition': 'partition'
+        'partition': 'partition'
     }
     
     pprint.pprint(flags)
