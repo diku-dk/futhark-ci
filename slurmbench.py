@@ -44,7 +44,8 @@ def collapse_flags(flags: dict[str, Optional[str]],
             flags.pop(flag)
             continue
         
-        flags[collapsed] += f' --{mapping[flag]}={flags.pop(flag)}'
+        if flags.get(flag) is not None:
+            flags[collapsed] += f' --{mapping[flag]}={flags.pop(flag)}'
 
     flags[collapsed] = flags[collapsed].strip()
 
@@ -72,7 +73,7 @@ def get_flags() -> dict[str, str]:
     '''
 
     parser = optparse.OptionParser()
-    parser.add_option('--gres', dest='gres', type='string', metavar='GRES', default='',
+    parser.add_option('--gres', dest='gres', type='string', metavar='GRES',
                       help=('The flags corresponding to GRES found here '
                             'https://slurm.schedmd.com/srun.html '))
     parser.add_option('--futhark', dest='futhark', type='string', metavar='FILE',
@@ -87,16 +88,16 @@ def get_flags() -> dict[str, str]:
     parser.add_option('--slurm-options', dest='slurm-options', type='string', default='',
                       metavar='SLURM-OPTIONS',
                       help='The options that will be passed to slurm.')
-    parser.add_option('--exclude', dest='exclude', type='string', metavar='EXCLUDE', default='',
+    parser.add_option('--exclude', dest='exclude', type='string', metavar='EXCLUDE',
                       help=('Do not run test cases that contain the given tag. Cases marked with '
                             '“nobench”, “disable”, or “no_foo” (where foo is the backend used) are '
                             'ignored by default..'))
     parser.add_option('--backend', dest='backend', type='string', metavar='BACKEND',
                       help=('The BACKEND used when compiling Futhark programs (without leading '
                             'futhark, e.g. just opencl).'))
-    parser.add_option('--ignore-files', dest='ignore-files', type='string', metavar='PATH', default='',
+    parser.add_option('--ignore-files', dest='ignore-files', type='string', metavar='PATH',
                       help='Ignore files whose PATH match the given regular expression.')
-    parser.add_option('--partition', dest='partition', type='string', metavar='NAME', default='',
+    parser.add_option('--partition', dest='partition', type='string', metavar='NAME',
                       help='Request a specific partition for the resource allocation.')
                       
     (flags, _) = parser.parse_args()
