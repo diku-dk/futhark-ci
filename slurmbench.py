@@ -9,20 +9,6 @@ import stat
 from typing import Optional
 
 
-FUTHARK_OPTIONS = {
-    'backend': 'backend',
-    'ignore-files': 'ignore-files',
-    'exclude': 'excludes',
-    'json': 'json'
-}
-
-
-SLURM_OPTIONS = {
-    'gres': 'gres',
-    'parition': 'partition'
-}
-
-
 def is_any_none_flags(flags: dict[str, Optional[str]]) -> Optional[Exception]:
     '''
     This function checks if any flags are none and reports an error asking for the last arguments
@@ -52,7 +38,7 @@ def collapse_flags(flags: dict[str, Optional[str]],
                    collapsed: str) -> dict[str, Optional[str]]:
     flags = flags.copy()
 
-    for flag in flags.keys().copy():
+    for flag in flags.copy().keys():
         if flags.get(flag) is None or mapping.get(flag) is None:
             continue
         
@@ -84,7 +70,7 @@ def get_flags() -> dict[str, str]:
     '''
 
     parser = optparse.OptionParser()
-    parser.add_option('--gres', dest='gres', type='string', metavar='GRES',
+    parser.add_option('--gres', dest='gres', type='string', metavar='GRES', default='',
                       help=('The flags corresponding to GRES found here '
                             'https://slurm.schedmd.com/srun.html '))
     parser.add_option('--futhark', dest='futhark', type='string', metavar='FILE',
@@ -94,28 +80,40 @@ def get_flags() -> dict[str, str]:
     parser.add_option('--futhark-options', dest='futhark-options', type='string', default='',
                       metavar='FUTHARK-OPTIONS',
                       help='The options that will be passed to the futhark compiler.')
-    parser.add_option('--json', dest='json', type='string', metavar='FILE',
+    parser.add_option('--json', dest='json', type='string', metavar='FILE', 
                       help='The path to where the json FILE will go.')
     parser.add_option('--slurm-options', dest='slurm-options', type='string', default='',
                       metavar='SLURM-OPTIONS',
                       help='The options that will be passed to slurm.')
-    parser.add_option('--exclude', dest='exclude', type='string', metavar='EXCLUDE',
+    parser.add_option('--exclude', dest='exclude', type='string', metavar='EXCLUDE', default='',
                       help=('Do not run test cases that contain the given tag. Cases marked with '
                             '“nobench”, “disable”, or “no_foo” (where foo is the backend used) are '
                             'ignored by default..'))
     parser.add_option('--backend', dest='backend', type='string', metavar='BACKEND',
                       help=('The BACKEND used when compiling Futhark programs (without leading '
                             'futhark, e.g. just opencl).'))
-    parser.add_option('--ignore-files', dest='ignore-files', type='string', metavar='PATH',
+    parser.add_option('--ignore-files', dest='ignore-files', type='string', metavar='PATH', default='',
                       help='Ignore files whose PATH match the given regular expression.')
-    parser.add_option('--partition', dest='partition', type='string', metavar='NAME',
+    parser.add_option('--partition', dest='partition', type='string', metavar='NAME', default='',
                       help='Request a specific partition for the resource allocation.')
                       
     (flags, _) = parser.parse_args()
     flags = flags.__dict__
     
-    flags = collapse_flags(flags, SLURM_OPTIONS, 'slurm-options')
-    flags = collapse_flags(flags, FUTHARK_OPTIONS, 'futhark-options')
+    futhark_options_mapping = {
+        'backend': 'backend',
+        'ignore-files': 'ignore-files',
+        'exclude': 'exclude',
+        'json': 'json'
+    }
+
+    slurm_options_mapping = {
+        'gres': 'gres',
+        'parition': 'partition'
+    }
+    
+    flags = collapse_flags(flags, slurm_options_mapping, 'slurm-options')
+    flags = collapse_flags(flags, futhark_options_mapping, 'futhark-options')
 
     error = is_any_none_flags(flags)
     if error is not None:
