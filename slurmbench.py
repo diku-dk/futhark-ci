@@ -41,6 +41,7 @@ def collapse_flags(flags: dict[str, Optional[str]],
 
     for flag in flags.copy().keys():
         if flags.get(flag) is None or mapping.get(flag) is None:
+            flags.pop(flag)
             continue
         
         flags[collapsed] += f' --{mapping[flag]}={flags.pop(flag)}'
@@ -112,7 +113,9 @@ def get_flags() -> dict[str, str]:
         'gres': 'gres',
         'parition': 'partition'
     }
-     
+    
+    pprint.pprint(flags)
+
     flags = collapse_flags(flags, slurm_options_mapping, 'slurm-options')
     flags = collapse_flags(flags, futhark_options_mapping, 'futhark-options')
 
