@@ -44,7 +44,8 @@ runs:
                                 --backend=${{inputs.backend}} \
                                 --exclude=no_${{inputs.system}} \
                                 --futhark-options=${{inputs.options}} \
-                                --json=futhark-${{inputs.backend}}-${{inputs.system}}-$GITHUB_SHA.json --benchmarks=futhark-benchmarks
+                                --json=futhark-${{inputs.backend}}-${{inputs.system}}-$GITHUB_SHA.json \
+                                --benchmarks=futhark-benchmarks
     - uses: actions/upload-artifact@v1
       with:
         name: futhark-${{inputs.backend}}-${{inputs.system}}-${{ github.sha }}.json
