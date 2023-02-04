@@ -51,10 +51,15 @@ def collapse_flags(flags: dict[str, Optional[str]],
                    mapping: dict[str, str],
                    collapsed: str) -> dict[str, Optional[str]]:
     flags = flags.copy()
-    for flag in flags.copy().keys():
-        if mapping.get(flag) is not None:
-            flags[collapsed] += f' --{mapping[flag]}={flags.pop(flag)}'
+
+    for flag in flags.keys().copy():
+        if flags.get(flag) is None or mapping.get(flag) is None:
+            continue
+        
+        flags[collapsed] += f' --{mapping[flag]}={flags.pop(flag)}'
+
     flags[collapsed] = flags[collapsed].strip()
+
     return flags
 
 
@@ -103,7 +108,7 @@ def get_flags() -> dict[str, str]:
                             'futhark, e.g. just opencl).'))
     parser.add_option('--ignore-files', dest='ignore-files', type='string', metavar='PATH',
                       help='Ignore files whose PATH match the given regular expression.')
-    parser.add_option('--parition', dest='parition', type='string', metavar='NAME',
+    parser.add_option('--partition', dest='partition', type='string', metavar='NAME',
                       help='Request a specific partition for the resource allocation.')
                       
     (flags, _) = parser.parse_args()
