@@ -99,6 +99,8 @@ def get_flags() -> dict[str, str]:
                       help='Ignore files whose PATH match the given regular expression.')
     parser.add_option('--partition', dest='partition', type='string', metavar='NAME',
                       help='Request a specific partition for the resource allocation.')
+    parser.add_option('--job-name', dest='job-name', type='string', metavar='NAME',
+                      help='Specify a NAME for the job.')
                       
     (flags, _) = parser.parse_args()
     flags = flags.__dict__
@@ -112,7 +114,8 @@ def get_flags() -> dict[str, str]:
 
     slurm_options_mapping = {
         'gres': 'gres',
-        'partition': 'partition'
+        'partition': 'partition',
+        'job-name': 'job-name'
     }
     
     pprint.pprint(flags)
