@@ -111,7 +111,7 @@ def get_flags() -> dict[str, str]:
         'gres': 'gres',
         'parition': 'partition'
     }
-    
+     
     flags = collapse_flags(flags, slurm_options_mapping, 'slurm-options')
     flags = collapse_flags(flags, futhark_options_mapping, 'futhark-options')
 
