@@ -269,9 +269,14 @@ def find_process_name(pid: int) -> Union[str, None]:
     Union[str, None]
         The name or None.
     '''
-    name = subprocess.check_output(['ps', '-p', str(pid), '-o', 'comm=']).decode().strip('\n')
+    try:
+        name = subprocess.check_output(['ps', '-p', str(pid), '-o', 'comm=']).decode().strip('\n')
+    except subprocess.CalledProcessError:
+        return None
+    
     if name == '':
         return None
+    
     return name
 
 
