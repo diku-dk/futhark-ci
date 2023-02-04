@@ -23,7 +23,7 @@ jobs:
         path: futhark-nightly-linux-x86_64.tar.xz
 
   benchmark-titanx-cuda:
-    runs-on: [titanx, cuda]
+    runs-on: [titanx]
     needs: [build-linux-nix]
     if: github.repository == 'SelfHostedRunnerTest/futhark' && !github.event.pull_request.draft
     steps:
@@ -38,7 +38,7 @@ jobs:
         gpu: titanx
 
   benchmark-titanrtx-opencl:
-    runs-on: [titanrtx, opencl]
+    runs-on: [titanrtx]
     needs: [build-linux-nix]
     if: github.repository == 'SelfHostedRunnerTest/futhark' && !github.event.pull_request.draft
     steps:

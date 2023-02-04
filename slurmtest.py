@@ -64,7 +64,7 @@ def get_flags() -> dict[str, str]:
     Example:
     {
         'futhark': '/path/to/futhark.tar.xv',
-        'benchmarks': '/path/to/benchmarks/',
+        'tests': '/path/to/tests/',
         'futhark-options': --some --valid --futhark --options,
         'slurm-options': --some --valid --slurm --options
     }
@@ -81,42 +81,78 @@ def get_flags() -> dict[str, str]:
                             'https://slurm.schedmd.com/srun.html '))
     parser.add_option('--futhark', dest='futhark', type='string', metavar='FILE',
                       help='Path to tar FILE with the binaries of the futhark.')
-    parser.add_option('--benchmarks', dest='benchmarks', type='string', metavar='PATH',
-                      help='PATH to the benchmarks.')
+    parser.add_option('--tests', dest='tests', type='string', metavar='PATH',
+                      help='PATH to the tests.')
     parser.add_option('--futhark-options', dest='futhark-options', type='string', default='',
                       metavar='FUTHARK-OPTIONS',
                       help='The options that will be passed to the futhark compiler.')
-    parser.add_option('--json', dest='json', type='string', metavar='FILE', 
-                      help='The path to where the json FILE will go.')
     parser.add_option('--slurm-options', dest='slurm-options', type='string', default='',
                       metavar='SLURM-OPTIONS',
                       help='The options that will be passed to slurm.')
-    parser.add_option('--exclude', dest='exclude', type='string', metavar='tag',
-                      help=('Do not run test cases that contain the given tag. Cases marked with '
-                            '“nobench”, “disable”, or “no_foo” (where foo is the backend used) are '
-                            'ignored by default..'))
-    parser.add_option('--backend', dest='backend', type='string', metavar='program',
+    parser.add_option('--backend', dest='backend', type='string', metavar='BACKEND',
                       help=('The BACKEND used when compiling Futhark programs (without leading '
                             'futhark, e.g. just opencl).'))
-    parser.add_option('--ignore-files', dest='ignore-files', type='string', metavar='PATH',
-                      help='Ignore files whose PATH match the given regular expression.')
     parser.add_option('--partition', dest='partition', type='string', metavar='NAME',
                       help='Request a specific partition for the resource allocation.')
     parser.add_option('--job-name', dest='job-name', type='string', metavar='NAME',
                       help='Specify a NAME for the job.')
-    parser.add_option('--cpus-per-task', dest='cpus-per-task', type='string', metavar='ncpus',
-                      help='Request that ncpus be allocated per process.')
-    parser.add_option('--mem', dest='mem', metavar='sizee[units]',
-                      help='Specify the real memory required per node. Default units are megabytes.')
-    
+    parser.add_option('--exclude', dest='exclude', type='string', metavar='tag',
+                      help=('Do not run test cases that contain the given tag. Cases marked with '
+                            '“nobench”, “disable”, or “no_foo” (where foo is the backend used) are '
+                            'ignored by default..'))
+    parser.add_option('--cache-extension', dest='cache-extension', type='string', metavar='NAME',
+                      help=('For a program foo.fut, pass --cache-file foo.fut.EXTENSION. By '
+                            'default, --cache-file is not passed.'))
+    parser.add_option('-c', dest='c', action='store_true',
+                      help=('Only run compiled code - do not run the interpreter. '
+                            'This is the default.'))
+    parser.add_option('-C', dest='C', action='store_true',
+                      help='Test with the interpreter.')
+    parser.add_option('-i', dest='i', action='store_true',
+                      help='Compile the programs, but do not run them.')
+    parser.add_option('-t', dest='t', action='store_true',
+                      help='Type-check the programs, but do not run them.')
+    parser.add_option('--no-terminal', dest='no-terminal', action='store_true',
+                      help='Print each result on a line by itself, without line buffering.')
+    parser.add_option('--no-tuning', dest='no-tuning', action='store_true',
+                      help='Do not look for tuning files.')
+    parser.add_option('--concurrency', dest='concurrency', metavar='NUM',
+                      help=('The number of tests to run concurrently. Defaults to the number of ' 
+                            '(hyper-)cores available.'))
+    parser.add_option('--pass-option', dest='pass-option', metavar='opt',
+                      help='Pass an option to benchmark programs that are being run.')
+    parser.add_option('--pass-compiler-option', dest='pass-compiler-option', metavar='opt',
+                      help='Pass an extra option to the compiler when compiling the programs.')
+    parser.add_option('--runner', dest='runner', metavar='program',
+                      help=('If set to a non-empty string, compiled programs are not run directly, ' 
+                            'but instead the indicated program is run with its first argument ' 
+                            'being the path to the compiled Futhark program. This is useful for '
+                            'compilation targets that cannot be executed directly (as with '
+                            'futhark-pyopencl on some platforms), or when you wish to run the '
+                            'program on a remote machine.'))
+    parser.add_option('--tuning', dest='tuning', metavar='EXTENSION',
+                      help=('For each program being run, look for a tuning file with this '
+                            'extension, which is suffixed to the name of the program. For example, '
+                            'given --tuning=tuning (the default), the program foo.fut will be '
+                            'passed the tuning file foo.fut.tuning if it exists.'))
     (flags, _) = parser.parse_args()
     flags = flags.__dict__
     
     futhark_options_mapping = {
         'backend': '--backend',
-        'ignore-files': '--ignore-files',
         'exclude': '--exclude',
-        'json': '--json'
+        'cache-extension': '--cache-extension',
+        'c': '-c',
+        'C': '-C',
+        'concurrency': '--concurrency',
+        'i': '-i',
+        't': '-t',
+        'no-terminal': '--no-terminal',
+        'no-tuning': '--no-tuning',
+        'pass-option': '--pass-option',
+        'pass-compiler-option': '--pass-compiler-option',
+        'runner': '--runner',
+        'tuning': '--tuning',
     }
 
     slurm_options_mapping = {
@@ -141,31 +177,18 @@ def main() -> None:
     flags = get_flags()
 
     futhark = flags['futhark']
-    benchmarks = flags['benchmarks']
+    tests = flags['tests']
     futhark_options = flags['futhark-options']
     slurm_options = flags['slurm-options']
-
-    cwd = os.getcwd()
-
-    get_data_script = "get-data.sh"
-    os.chdir(benchmarks)
-    if not os.path.exists(get_data_script):
-        raise Exception(f'The script "{get_data_script}" does not exist.')
-
-    print('Getting Benchmark Data:')
-    get_data_command = f'./{get_data_script} external-data.txt'
-    if os.system(get_data_command) != 0:
-        raise Exception(f'Something went wrong during "{get_data_command}".')
-    os.chdir(cwd)
 
     script = 'temp.sh'
     with open(script, mode='w') as fp:
         fp.write('#!/bin/bash\n')
-        fp.write(f'{futhark} bench {benchmarks} {futhark_options}')
+        fp.write(f'{futhark} test {tests} {futhark_options}')
     
     os.chmod(script, os.stat(script).st_mode | stat.S_IEXEC)
     
-    print('Running Benchmark:')
+    print('Running Tests:')
     if os.system(f'srun {slurm_options} temp.sh') != 0:
         raise Exception('Something went wrong during srun.')
         
