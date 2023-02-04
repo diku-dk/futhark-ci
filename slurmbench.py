@@ -39,8 +39,8 @@ def collapse_flags(flags: dict[str, Optional[str]],
                    collapsed: str) -> dict[str, Optional[str]]:
     flags = flags.copy()
 
-    for flag in flags.copy().keys():
-        if flags.get(flag) is None or mapping.get(flag) is None:
+    for flag in mapping.copy().keys():
+        if flags.get(flag) is None:
             flags.pop(flag)
             continue
         
