@@ -13,7 +13,7 @@ import time
 import signal
 import json
 import shlex
-from typing import Union, Tuple
+from typing import Optional
 
 
 # The default flags depending on the hostname.
@@ -92,13 +92,13 @@ class Chdir:
         os.chdir(self._old_path)
 
 
-def get_name() -> Union[str, None]:
+def get_name() -> Optional[str]:
     '''
     Retrieves the name found in .runner and if not possible then None is returned.
     
     Returns
     -------
-    Union[str, None]
+    Optional[str]
         The name ofthe runner or None if the name does not exist.
     '''
 
@@ -109,55 +109,55 @@ def get_name() -> Union[str, None]:
     return json.load(fp).get('agentName')
 
 
-def is_any_none_flags(flags: dict[str, Union[str, None]]) -> Tuple[bool, Union[Exception, None]]:
+def is_any_none_flags(flags: dict[str, Optional[str]]) -> Optional[Exception]:
     '''
     This function checks if any flags are none and reports an error asking for the last arguments
     if sol.
 
     Parameters
     ----------
-    flags : dict[str, Union[str, None]]
+    flags : dict[str, Optional[str]]
         The flags which have been passed to the installation script.
     
     Returns
     -------
     bool
         True if the flags were valid otherwise false.
-    Union[Exception, None]
+    Optional[Exception]
         None if the flags were valid otherwise a corresponding error.
     '''
     if any(map(lambda opt: opt is None, flags.values())):
         missing_arg_pairs = filter(lambda pair: pair[1] is None, flags.items())
         missing_args = ', '.join(map(lambda pair: pair[0], missing_arg_pairs))
-        return False, Exception(f'Missing arguments: Please specify {missing_args}.')
+        return Exception(f'Missing arguments: Please specify {missing_args}.')
 
-    return True, None
+    return None
 
 
-def is_all_none_flags(flags: dict[str, Union[str, None]]) -> Tuple[bool, Union[Exception, None]]:
+def is_all_none_flags(flags: dict[str, Optional[str]]) -> Optional[Exception]:
     '''
     Checks if all the flags are set to None.
 
     Parameters
     ----------
-    flags : dict[str, Union[str, None]]
+    flags : dict[str, Optional[str]]
         The flags which have been passed to the installation script.
     
     Returns
     -------
     bool
         True if the flags were valid otherwise false.
-    Union[Exception, None]
+    Optional[Exception]
         None if the flags were valid otherwise a corresponding error.
     '''
 
     if any(map(lambda opt: opt is not None, flags.values())):
         passed_arg_pairs = filter(lambda pair: pair[1] is not None, flags.items())
         passed_args = ', '.join(map(lambda pair: pair[0], passed_arg_pairs))
-        return False, Exception(f'Too many arguments: Do not specify {passed_args} when ' +
+        return Exception(f'Too many arguments: Do not specify {passed_args} when ' +
         'using the start flag.')
 
-    return True, None
+    return None
 
 
 def get_flags() -> dict[str, str]:
@@ -200,8 +200,8 @@ def get_flags() -> dict[str, str]:
     if flags.get('start'):
         start = flags.pop('start')
 
-        is_valid, error = is_all_none_flags(flags)
-        if not is_valid:
+        error = is_all_none_flags(flags)
+        if error is not None:
             raise error
         
         flags = {'start': start}
@@ -212,18 +212,20 @@ def get_flags() -> dict[str, str]:
     if flags.get('kill'):
         kill = flags.pop('kill')
 
-        is_valid, error = is_all_none_flags(flags)
-        if not is_valid:
+        error = is_all_none_flags(flags)
+        if error is not None:
             raise error
         
         flags = {'kill': kill}
         return flags
+    
+    flags.pop('kill')
 
     if flags.get('remove') is not None:
         remove = flags.pop('remove')
 
-        is_valid, error = is_all_none_flags(flags)
-        if not is_valid:
+        error = is_all_none_flags(flags)
+        if error is not None:
             raise error
 
         flags = {'remove': remove}
@@ -242,8 +244,8 @@ def get_flags() -> dict[str, str]:
         print(f'Using default settings for {hostname} where name: {settings["name"]} and labels: {settings["labels"]}')
         print('If this was not the intention please specify name and labels.')
 
-    is_valid, error = is_any_none_flags(flags)
-    if not is_valid:
+    error = is_any_none_flags(flags)
+    if error is not None:
         raise error
 
     return flags
@@ -267,7 +269,7 @@ def format_flags(flags: dict[str, str]) -> str:
     return ' '.join(map(formatter, flags.items()))
     
 
-def find_process_name(pid: int) -> Union[str, None]:
+def find_process_name(pid: int) -> Optional[str]:
     '''
     Given a pid find the process name. If no process has that pid then None is returned.
 
@@ -278,7 +280,7 @@ def find_process_name(pid: int) -> Union[str, None]:
 
     Returns
     -------
-    Union[str, None]
+    Optional[str]
         The name or None.
     '''
     try:
@@ -303,7 +305,7 @@ def find_child_processes(pid: int) -> list[int]:
 
     Returns
     -------
-    Union[str, None]
+    Optional[str]
         A list of pids where each pid is a child process.
     '''
     try:
@@ -314,7 +316,7 @@ def find_child_processes(pid: int) -> list[int]:
     return list(map(int, pids_str.split()))
 
 
-def find_child_search(pid: int, child_name: str) -> Union[int, None]:
+def find_child_search(pid: int, child_name: str) -> Optional[int]:
     '''
     Performs a level-order traversal of the tree of child processes for a given process to find a
     child process with a given name.
@@ -328,7 +330,7 @@ def find_child_search(pid: int, child_name: str) -> Union[int, None]:
 
     Returns
     -------
-    Union[int, None]
+    Optional[int]
         The pid of the found child process or None if not found.
     '''
     queue = [pid]

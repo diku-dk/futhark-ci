@@ -6,7 +6,6 @@ assert sys.version_info >= (3, 9), "Use Python 3.9 or newer."
 import optparse
 import os
 import stat
-import pprint
 from typing import Optional
 
 
@@ -44,8 +43,12 @@ def collapse_flags(flags: dict[str, Optional[str]],
             flags.pop(flag)
             continue
         
-        if flags.get(flag) is not None:
-            flags[collapsed] += f' --{mapping[flag]}={flags.pop(flag)}'
+        value = flags.pop(flag)
+        if isinstance(value, bool):
+            if value:
+                flags[collapsed] += f' {mapping[flag]}'
+        else:
+            flags[collapsed] += f' {mapping[flag]}={value}'
 
     flags[collapsed] = flags[collapsed].strip()
 
@@ -88,11 +91,11 @@ def get_flags() -> dict[str, str]:
     parser.add_option('--slurm-options', dest='slurm-options', type='string', default='',
                       metavar='SLURM-OPTIONS',
                       help='The options that will be passed to slurm.')
-    parser.add_option('--exclude', dest='exclude', type='string', metavar='EXCLUDE',
+    parser.add_option('--exclude', dest='exclude', type='string', metavar='tag',
                       help=('Do not run test cases that contain the given tag. Cases marked with '
                             '“nobench”, “disable”, or “no_foo” (where foo is the backend used) are '
                             'ignored by default..'))
-    parser.add_option('--backend', dest='backend', type='string', metavar='BACKEND',
+    parser.add_option('--backend', dest='backend', type='string', metavar='program',
                       help=('The BACKEND used when compiling Futhark programs (without leading '
                             'futhark, e.g. just opencl).'))
     parser.add_option('--ignore-files', dest='ignore-files', type='string', metavar='PATH',
@@ -101,29 +104,31 @@ def get_flags() -> dict[str, str]:
                       help='Request a specific partition for the resource allocation.')
     parser.add_option('--job-name', dest='job-name', type='string', metavar='NAME',
                       help='Specify a NAME for the job.')
-                      
+    parser.add_option('--cpus-per-task', dest='cpus-per-task', type='string', metavar='ncpus',
+                      help='Request that ncpus be allocated per process.')
+    parser.add_option('--mem', dest='mem', metavar='sizee[units]',
+                      help='Specify the real memory required per node. Default units are megabytes.')
+    
     (flags, _) = parser.parse_args()
     flags = flags.__dict__
     
     futhark_options_mapping = {
-        'backend': 'backend',
-        'ignore-files': 'ignore-files',
-        'exclude': 'exclude',
-        'json': 'json'
+        'backend': '--backend',
+        'ignore-files': '--ignore-files',
+        'exclude': '--exclude',
+        'json': '--json'
     }
 
     slurm_options_mapping = {
-        'gres': 'gres',
-        'partition': 'partition',
-        'job-name': 'job-name'
+        'gres': '--gres',
+        'partition': '--partition',
+        'job-name': '--job-name',
+        'cpus-per-task': '--cpus-per-task',
+        'mem': '--mem'
     }
-    
-    pprint.pprint(flags)
 
     flags = collapse_flags(flags, slurm_options_mapping, 'slurm-options')
     flags = collapse_flags(flags, futhark_options_mapping, 'futhark-options')
-
-    pprint.pprint(flags)
 
     error = is_any_none_flags(flags)
     if error is not None:

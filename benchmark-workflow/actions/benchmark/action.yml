@@ -22,7 +22,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: ./.github/actions/benchmark/is-slurm
+    - uses: ./.github/actions/is-slurm
       id: slurm
 
     - uses: ./.github/actions/benchmark/default

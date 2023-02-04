@@ -36,7 +36,7 @@ runs:
     - name: Run benchmarks
       shell: bash
       run: |
-        python3.9 slurmbench.py \ 
+        python3.9 slurmbench.py \
           --partition=gpu \
           --gres=gpu:${{inputs.gpu}} \
           --futhark="$PWD/futhark-nightly-linux-x86_64/bin/futhark" \
@@ -46,9 +46,10 @@ runs:
           --exclude=no_${{inputs.system}} \
           --futhark-options=${{inputs.options}} \
           --json=futhark-${{inputs.backend}}-${{inputs.system}}-$GITHUB_SHA.json \
-          --benchmarks=futhark-benchmarks \
+          --benchmarks=./futhark-benchmarks \
           --job-name=Futhark_Bench_${{inputs.backend}}_${{inputs.system}}
     - uses: actions/upload-artifact@v1
       with:
         name: futhark-${{inputs.backend}}-${{inputs.system}}-${{ github.sha }}.json
         path: futhark-${{inputs.backend}}-${{inputs.system}}-${{ github.sha }}.json
+        
