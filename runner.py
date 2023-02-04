@@ -190,6 +190,8 @@ def get_flags() -> dict[str, str]:
                       help='the LABELS the runner should have.', metavar='LABELS')
     parser.add_option('-s', '--start', action="store_true", dest="start", default=False,
                       help='If the runner should START.', metavar='START')
+    parser.add_option('-k', '--kill', action="store_true", dest="kill", default=False,
+                      help='If the runner should be stopped.', metavar='KILL')
     parser.add_option('-r', '--remove', dest="remove",
                       help='the token belonging to the runner that will be REMOVEd.', metavar='REMOVE')
     (flags, _) = parser.parse_args()
@@ -206,6 +208,16 @@ def get_flags() -> dict[str, str]:
         return flags
     
     flags.pop('start')
+
+    if flags.get('kill'):
+        kill = flags.pop('kill')
+
+        is_valid, error = is_all_none_flags(flags)
+        if not is_valid:
+            raise error
+        
+        flags = {'kill': kill}
+        return flags
 
     if flags.get('remove') is not None:
         remove = flags.pop('remove')
@@ -525,6 +537,13 @@ def main() -> None:
             start()
         else:
             raise Exception('The runner has to be setup before it can be started.')
+        return
+    
+    if flags.get('kill') is not None and flags.get('kill'):
+        if os.path.exists(RUNNER_FOLDER):
+            stop_runner()
+        else:
+            raise Exception('The runner has to be setup before it can be killed.')
         return
     
     if flags.get('remove') is not None:
