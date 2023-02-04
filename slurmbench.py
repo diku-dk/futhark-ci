@@ -6,6 +6,7 @@ assert sys.version_info >= (3, 9), "Use Python 3.9 or newer."
 import optparse
 import os
 import stat
+import pprint
 from typing import Optional
 
 
@@ -114,6 +115,8 @@ def get_flags() -> dict[str, str]:
      
     flags = collapse_flags(flags, slurm_options_mapping, 'slurm-options')
     flags = collapse_flags(flags, futhark_options_mapping, 'futhark-options')
+
+    pprint.pprint(flags)
 
     error = is_any_none_flags(flags)
     if error is not None:
