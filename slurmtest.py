@@ -135,6 +135,10 @@ def get_flags() -> dict[str, str]:
                             'extension, which is suffixed to the name of the program. For example, '
                             'given --tuning=tuning (the default), the program foo.fut will be '
                             'passed the tuning file foo.fut.tuning if it exists.'))
+    parser.add_option('--cpus-per-task', dest='cpus-per-task', type='string', metavar='ncpus',
+                      help='Request that ncpus be allocated per process.')
+    parser.add_option('--mem', dest='mem', metavar='sizee[units]',
+                      help='Specify the real memory required per node. Default units are megabytes.')
     (flags, _) = parser.parse_args()
     flags = flags.__dict__
     
