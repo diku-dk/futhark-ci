@@ -80,8 +80,8 @@ def get_flags() -> dict[str, str]:
     parser.add_option('--gres', dest='gres', type='string', metavar='GRES',
                       help=('The flags corresponding to GRES found here '
                             'https://slurm.schedmd.com/srun.html '))
-    parser.add_option('--futhark', dest='futhark', type='string', metavar='FILE',
-                      help='Path to tar FILE with the binaries of the futhark.')
+    # parser.add_option('--futhark', dest='futhark', type='string', metavar='FILE',
+    #                   help='Path to tar FILE with the binaries of the futhark.')
     parser.add_option('--tests', dest='tests', type='string', metavar='PATH',
                       help='PATH to the tests.')
     parser.add_option('--futhark-options', dest='futhark-options', type='string', default='',
@@ -181,7 +181,7 @@ def get_flags() -> dict[str, str]:
 def main() -> None:
     flags = get_flags()
 
-    futhark = flags['futhark']
+    # futhark = flags['futhark']
     tests = flags['tests']
     futhark_options = flags['futhark-options']
     slurm_options = flags['slurm-options']
@@ -189,7 +189,7 @@ def main() -> None:
     script = 'temp.sh'
     with open(script, mode='w') as fp:
         fp.write('#!/bin/bash\n')
-        fp.write(f'{futhark} test {tests} {futhark_options}')
+        fp.write(f'futhark test {tests} {futhark_options}')
     
     os.chmod(script, os.stat(script).st_mode | stat.S_IEXEC)
     
