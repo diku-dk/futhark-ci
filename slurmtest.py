@@ -40,7 +40,8 @@ def collapse_flags(flags: dict[str, Optional[str]],
 
     for flag in mapping.copy().keys():
         if flags.get(flag) is None:
-            flags.pop(flag)
+            try: flags.pop(flag)
+            except KeyError: pass
             continue
         
         value = flags.pop(flag)
