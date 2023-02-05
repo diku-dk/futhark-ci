@@ -199,6 +199,7 @@ def get_flags() -> dict[str, str]:
     
     if flags.get('start'):
         start = flags.pop('start')
+        flags.pop('kill')
 
         error = is_all_none_flags(flags)
         if error is not None:
@@ -206,11 +207,10 @@ def get_flags() -> dict[str, str]:
         
         flags = {'start': start}
         return flags
-    
-    flags.pop('start')
 
     if flags.get('kill'):
         kill = flags.pop('kill')
+        flags.pop('start')
 
         error = is_all_none_flags(flags)
         if error is not None:
@@ -219,6 +219,7 @@ def get_flags() -> dict[str, str]:
         flags = {'kill': kill}
         return flags
     
+    flags.pop('start')
     flags.pop('kill')
 
     if flags.get('remove') is not None:
